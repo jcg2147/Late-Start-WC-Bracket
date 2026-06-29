@@ -98,7 +98,7 @@
 
     .summary {
       display: grid;
-      grid-template-columns: repeat(5, minmax(0, 1fr));
+      grid-template-columns: repeat(4, minmax(0, 1fr));
       gap: 10px;
       margin-bottom: 20px;
     }
@@ -183,6 +183,40 @@
       background: #0b1527;
       color: var(--text);
       padding: 7px 9px;
+    }
+
+    .match-field {
+      margin-top: 4px;
+      padding-top: 8px;
+      border-top: 1px solid rgba(38, 54, 83, 0.8);
+    }
+
+    .match-field label,
+    .match-field-title {
+      display: block;
+      color: var(--faint);
+      font-size: 0.7rem;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .match-field input {
+      width: 100%;
+      min-height: 34px;
+      margin-top: 5px;
+      border: 1px solid var(--line-strong);
+      border-radius: 8px;
+      background: #0b1527;
+      color: var(--text);
+      padding: 7px 9px;
+    }
+
+    .match-field-value {
+      margin-top: 4px;
+      color: var(--text);
+      font-size: 0.9rem;
+      font-weight: 850;
     }
 
     .button {
@@ -425,26 +459,23 @@
     }
 
     .third-place {
-      display: grid;
-      grid-template-columns: minmax(240px, 420px) minmax(0, 1fr);
-      gap: 16px;
-      align-items: start;
-      margin-top: 20px;
-      padding: 14px;
+      margin-top: 14px;
+      padding-top: 12px;
       border: 1px solid var(--line);
       border-radius: 8px;
-      background: rgba(16, 27, 47, 0.62);
+      background: rgba(8, 17, 31, 0.4);
     }
 
-    .third-place h2 {
-      font-size: 1rem;
-      line-height: 1.2;
+    .third-place-title {
+      padding: 0 4px 8px;
+      font-size: 0.8rem;
+      font-weight: 850;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
     }
 
-    .third-place p {
-      margin-top: 6px;
-      color: var(--muted);
-      font-size: 0.86rem;
+    .third-place .match-card {
+      margin: 0 8px 8px;
     }
 
     .empty-state,
@@ -502,9 +533,6 @@
         padding-top: 4px;
       }
 
-      .third-place {
-        grid-template-columns: 1fr;
-      }
     }
 
     @media (max-width: 520px) {
@@ -802,6 +830,11 @@
         maxRow = Math.max(maxRow, end);
       });
 
+      if (finalMatch && matches.some(match => match.round === '3P')) {
+        const finalStart = items[finalMatch.id]?.start || 1;
+        maxRow = Math.max(maxRow, finalStart + (MATCH_CARD_ROWS * 2) + 4);
+      }
+
       return {
         items,
         rows: maxRow + halfSpan
@@ -859,6 +892,7 @@
       const pickLine = match.local_winner
         ? `<div class="local-pick">Your pick: ${escapeHtml(match.local_winner)}</div>`
         : '';
+      const finalGoalsLine = renderFinalGoalsField(match);
       const styleAttr = layoutItem
         ? ` style="grid-row: ${layoutItem.start} / span ${MATCH_CARD_ROWS};"`
         : '';
@@ -876,13 +910,41 @@
           <div class="match-footer">
             ${winnerLine}
             ${pickLine}
+            ${finalGoalsLine}
             <div>${formatDate(match.scheduled_at)}</div>
             <div>${escapeHtml(match.venue || 'Venue TBD')} &middot; ${match.round_points} pts</div>
           </div>
         </article>`;
     }
 
-    function renderRound(roundKey, matches, layout) {
+    function renderFinalGoalsField(match) {
+      const finalWinner = match.local_winner || match.winner;
+      if (match.round !== 'F' || !finalWinner) return '';
+
+      if (isBracketReadOnly()) {
+        return `
+          <div class="match-field">
+            <span class="match-field-title">Final goals tiebreaker</span>
+            <div class="match-field-value">${escapeHtml(finalGoalsValue || currentSubmission?.final_goals_tiebreaker || '0')}</div>
+          </div>`;
+      }
+
+      return `
+        <div class="match-field">
+          <label for="final-goals">Final goals tiebreaker</label>
+          <input
+            id="final-goals"
+            type="number"
+            min="0"
+            step="1"
+            inputmode="numeric"
+            value="${escapeHtml(finalGoalsValue)}"
+            ${isSubmitting ? 'disabled' : ''}
+          />
+        </div>`;
+    }
+
+    function renderRound(roundKey, matches, layout, thirdPlace = null) {
       const roundMatches = matches
         .filter(match => match.round === roundKey)
         .sort((a, b) => {
@@ -899,7 +961,20 @@
           </div>
           <div class="round-matches" style="--bracket-rows: ${layout.rows}; height: ${layout.rows * BRACKET_ROW_HEIGHT}px;">
             ${roundMatches.map(match => renderMatchCard(match, layout.items[match.id])).join('')}
+            ${roundKey === 'F' && thirdPlace ? renderThirdPlaceInFinalColumn(thirdPlace, layout) : ''}
           </div>
+        </section>`;
+    }
+
+    function renderThirdPlaceInFinalColumn(match, layout) {
+      const finalMatch = baseMatches.find(baseMatch => baseMatch.round === 'F');
+      const finalLayout = layout.items[finalMatch?.id] || Object.values(layout.items).at(-1);
+      const start = finalLayout ? finalLayout.start + MATCH_CARD_ROWS + 2 : 1;
+
+      return `
+        <section class="third-place" style="grid-row: ${start} / span ${MATCH_CARD_ROWS};" aria-label="Third-place match">
+          <div class="third-place-title">Third-Place Match</div>
+          ${renderMatchCard(match)}
         </section>`;
     }
 
@@ -951,14 +1026,11 @@
       const completed = matches.filter(match => match.is_completed).length;
       const locked = matches.filter(match => matchState(match) === 'locked').length;
       const pickedMatches = matches.filter(match => match.local_winner).length;
-      const canadaAdvanced = matches.some(match => match.id !== 73 && (match.home_team === 'Canada' || match.away_team === 'Canada'));
-
       document.getElementById('summary').innerHTML = [
         ['Matches', matches.length],
         ['Completed', completed],
         ['Locked', locked],
-        ['Local picks', pickedMatches],
-        ['Canada advanced', canadaAdvanced ? 'Yes' : 'No']
+        ['Local picks', pickedMatches]
       ].map(([label, value]) => `
         <div class="summary-item">
           <div class="summary-label">${escapeHtml(label)}</div>
@@ -1009,7 +1081,7 @@
 
       const detail = currentUser
         ? isSubmitted
-          ? `Locked on ${formatDate(currentSubmission.submitted_at)}. Final goals tiebreaker: ${currentSubmission.final_goals_tiebreaker}.`
+          ? `Locked on ${formatDate(currentSubmission.submitted_at)}.`
           : `${readiness.futureMatches.length - readiness.missing.length} of ${readiness.futureMatches.length} picks complete.`
         : 'You can view and test picks while logged out, but only Google-authenticated users can submit.';
 
@@ -1022,18 +1094,6 @@
         </div>
         <div class="submit-controls">
           ${currentUser ? `
-            <div class="field">
-              <label for="final-goals">Final goals</label>
-              <input
-                id="final-goals"
-                type="number"
-                min="0"
-                step="1"
-                inputmode="numeric"
-                value="${escapeHtml(finalGoalsValue)}"
-                ${isSubmitted || isSubmitting ? 'disabled' : ''}
-              />
-            </div>
             <button class="button primary" id="submit-bracket" type="button" ${disabledSubmit ? 'disabled' : ''}>
               ${isSubmitting ? 'Submitting...' : isSubmitted ? 'Bracket locked' : 'Submit bracket'}
             </button>
@@ -1061,18 +1121,10 @@
           <div class="bracket-scroll">
             <div class="bracket">
               ${renderConnectors(matches, layout)}
-              ${ROUND_ORDER.map(roundKey => renderRound(roundKey, matches, layout)).join('')}
+              ${ROUND_ORDER.map(roundKey => renderRound(roundKey, matches, layout, thirdPlace)).join('')}
             </div>
           </div>
-        </div>
-        ${thirdPlace ? `
-          <section class="third-place" aria-label="Third-place match">
-            <div>
-              <h2>Third-place Match</h2>
-              <p>Displayed separately because it branches from the semifinal losers.</p>
-            </div>
-            ${renderMatchCard(thirdPlace)}
-          </section>` : ''}`;
+        </div>`;
     }
 
     function showError(message) {
@@ -1297,6 +1349,13 @@
       selectWinner(Number(teamRow.dataset.matchId), teamRow.dataset.team);
     });
 
+    document.getElementById('app').addEventListener('input', event => {
+      if (event.target.id !== 'final-goals') return;
+      finalGoalsValue = event.target.value;
+      formMessage = '';
+      formMessageType = '';
+    });
+
     document.getElementById('account-panel').addEventListener('click', event => {
       if (event.target.closest('#sign-in-google')) {
         signInWithGoogle();
@@ -1311,13 +1370,6 @@
       if (event.target.closest('#submit-bracket')) {
         submitBracket();
       }
-    });
-
-    document.getElementById('account-panel').addEventListener('input', event => {
-      if (event.target.id !== 'final-goals') return;
-      finalGoalsValue = event.target.value;
-      formMessage = '';
-      formMessageType = '';
     });
 
     async function init() {
