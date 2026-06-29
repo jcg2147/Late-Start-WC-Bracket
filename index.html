@@ -797,6 +797,10 @@
     let isSavingUsername = false;
     let usernameMessage = '';
     let usernameMessageType = '';
+    let inviteCodeDraft = '';
+    let isVerifyingInvite = false;
+    let inviteMessage = '';
+    let inviteMessageType = '';
     let currentSubmission = null;
     let finalGoalsValue = '';
     let isSubmitting = false;
@@ -845,6 +849,10 @@
 
     function hasUsername() {
       return Boolean(currentProfile?.username);
+    }
+
+    function hasInviteAccess() {
+      return Boolean(currentProfile?.invite_verified);
     }
 
     function hasStarted(match) {
@@ -1418,10 +1426,13 @@
       const readiness = getSubmissionReadiness(matches);
       const isSubmitted = isBracketReadOnly();
       const userName = userDisplayName(currentUser);
-      const showUsernameForm = currentUser && (!hasUsername() || isEditingUsername);
+      const showInviteForm = currentUser && !hasInviteAccess();
+      const showUsernameForm = currentUser && hasInviteAccess() && (!hasUsername() || isEditingUsername);
 
       const title = currentUser
-        ? hasUsername()
+        ? !hasInviteAccess()
+          ? 'Enter your invite code'
+          : hasUsername()
           ? isSubmitted
             ? `Submitted bracket for ${userName}`
             : `Signed in as ${userName}`
@@ -1429,7 +1440,9 @@
         : 'Sign in to submit your bracket';
 
       const detail = currentUser
-        ? !hasUsername()
+        ? !hasInviteAccess()
+          ? 'Enter the invite code to join this private bracket.'
+          : !hasUsername()
           ? 'Pick the name your friends will see in Current Standings.'
           : isSubmitted
             ? `Locked on ${formatDate(currentSubmission.submitted_at)}.`
@@ -1438,11 +1451,29 @@
 
       const messageClass = formMessageType ? ` ${formMessageType}` : '';
       const usernameMessageClass = usernameMessageType ? ` ${usernameMessageType}` : '';
+      const inviteMessageClass = inviteMessageType ? ` ${inviteMessageType}` : '';
 
       panel.innerHTML = `
         <div class="auth-copy">
           <div class="auth-title">${escapeHtml(title)}</div>
           <div class="auth-detail">${escapeHtml(detail)}</div>
+          ${showInviteForm ? `
+            <div class="username-form">
+              <div class="username-row">
+                <input
+                  id="invite-code-input"
+                  type="text"
+                  value="${escapeHtml(inviteCodeDraft)}"
+                  placeholder="Invite code"
+                  autocomplete="off"
+                  ${isVerifyingInvite ? 'disabled' : ''}
+                />
+                <button class="button primary" id="verify-invite" type="button" ${isVerifyingInvite ? 'disabled' : ''}>
+                  ${isVerifyingInvite ? 'Checking...' : 'Join bracket'}
+                </button>
+              </div>
+              ${inviteMessage ? `<div class="form-message${inviteMessageClass}">${escapeHtml(inviteMessage)}</div>` : ''}
+            </div>` : ''}
           ${showUsernameForm ? `
             <div class="username-form">
               <div class="username-row">
@@ -1465,7 +1496,7 @@
         </div>
         <div class="submit-controls">
           ${currentUser ? `
-            ${hasUsername() && !isEditingUsername ? `<button class="button" id="edit-username" type="button" ${isSavingUsername ? 'disabled' : ''}>Edit username</button>` : ''}
+            ${hasInviteAccess() && hasUsername() && !isEditingUsername ? `<button class="button" id="edit-username" type="button" ${isSavingUsername ? 'disabled' : ''}>Edit username</button>` : ''}
             <button class="button" id="sign-out" type="button" ${isSubmitting ? 'disabled' : ''}>Sign out</button>
           ` : `
             <button class="button primary" id="sign-in-google" type="button">Sign in with Google</button>
@@ -1525,6 +1556,13 @@
     }
 
     async function loadLeaderboard() {
+      if (!currentUser || !hasInviteAccess()) {
+        leaderboardRows = [];
+        leaderboardError = '';
+        isLeaderboardLoading = false;
+        return;
+      }
+
       isLeaderboardLoading = true;
       leaderboardError = '';
       renderLeaderboard();
@@ -1547,6 +1585,21 @@
     function renderApp() {
       const matches = deriveMatches();
       renderAccountPanel(matches);
+
+      if (!currentUser) {
+        document.getElementById('leaderboard').innerHTML = '';
+        document.getElementById('app').innerHTML = `
+          <div class="empty-state">Sign in with Google to join this private bracket.</div>`;
+        return;
+      }
+
+      if (!hasInviteAccess()) {
+        document.getElementById('leaderboard').innerHTML = '';
+        document.getElementById('app').innerHTML = `
+          <div class="empty-state">Enter the invite code to unlock the bracket.</div>`;
+        return;
+      }
+
       renderLeaderboard();
       renderBracket(matches);
     }
@@ -1599,6 +1652,10 @@
       isEditingUsername = false;
       usernameMessage = '';
       usernameMessageType = '';
+      inviteCodeDraft = '';
+      isVerifyingInvite = false;
+      inviteMessage = '';
+      inviteMessageType = '';
       currentSubmission = null;
       localPicks = {};
       finalGoalsValue = '';
@@ -1613,12 +1670,15 @@
       isEditingUsername = false;
       usernameMessage = '';
       usernameMessageType = '';
+      inviteCodeDraft = '';
+      inviteMessage = '';
+      inviteMessageType = '';
 
       if (!currentUser) return;
 
       const { data, error } = await db
         .from('users')
-        .select('id, username')
+        .select('id, username, invite_verified, invite_verified_at')
         .eq('id', currentUser.id)
         .maybeSingle();
 
@@ -1630,11 +1690,18 @@
 
       currentProfile = data;
       usernameDraft = data?.username || '';
-      isEditingUsername = !data?.username;
+      isEditingUsername = Boolean(data?.invite_verified && !data?.username);
     }
 
     async function saveUsername() {
       if (!currentUser || isSavingUsername) return;
+
+      if (!hasInviteAccess()) {
+        usernameMessage = 'Enter a valid invite code before choosing a username.';
+        usernameMessageType = 'error';
+        renderApp();
+        return;
+      }
 
       const validationError = validateUsername(usernameDraft);
       if (validationError) {
@@ -1664,7 +1731,9 @@
 
       currentProfile = {
         id: currentUser.id,
-        username: data?.username || usernameDraft.trim()
+        username: data?.username || usernameDraft.trim(),
+        invite_verified: true,
+        invite_verified_at: currentProfile?.invite_verified_at || new Date().toISOString()
       };
       usernameDraft = currentProfile.username;
       isEditingUsername = false;
@@ -1674,10 +1743,59 @@
       await loadLeaderboard();
     }
 
+    async function verifyInviteCode() {
+      if (!currentUser || isVerifyingInvite) return;
+
+      const inviteCode = inviteCodeDraft.trim();
+      if (!inviteCode) {
+        inviteMessage = 'Enter an invite code.';
+        inviteMessageType = 'error';
+        renderApp();
+        return;
+      }
+
+      isVerifyingInvite = true;
+      inviteMessage = '';
+      inviteMessageType = '';
+      renderApp();
+
+      const { data, error } = await db.rpc('verify_invite_code', {
+        code_input: inviteCode
+      });
+
+      isVerifyingInvite = false;
+
+      if (error) {
+        inviteMessage = error.message;
+        inviteMessageType = 'error';
+        renderApp();
+        return;
+      }
+
+      if (!data?.success) {
+        inviteMessage = data?.message || 'That invite code is not valid.';
+        inviteMessageType = 'error';
+        renderApp();
+        return;
+      }
+
+      inviteCodeDraft = '';
+      inviteMessage = 'Invite verified.';
+      inviteMessageType = 'ok';
+      await loadUserProfile();
+      renderApp();
+      await loadLeaderboard();
+    }
+
     async function loadSubmittedBracket() {
       currentSubmission = null;
 
       if (!currentUser) {
+        renderApp();
+        return;
+      }
+
+      if (!hasInviteAccess()) {
         renderApp();
         return;
       }
@@ -1731,6 +1849,13 @@
 
     async function submitBracket() {
       if (!currentUser || isBracketReadOnly() || isSubmitting) return;
+
+      if (!hasInviteAccess()) {
+        formMessage = 'Enter a valid invite code before submitting.';
+        formMessageType = 'error';
+        renderApp();
+        return;
+      }
 
       if (!hasUsername()) {
         formMessage = 'Choose a username before submitting.';
@@ -1807,6 +1932,10 @@
           isEditingUsername = false;
           usernameMessage = '';
           usernameMessageType = '';
+          inviteCodeDraft = '';
+          isVerifyingInvite = false;
+          inviteMessage = '';
+          inviteMessageType = '';
           currentSubmission = null;
           localPicks = {};
           finalGoalsValue = '';
@@ -1902,6 +2031,11 @@
         return;
       }
 
+      if (event.target.closest('#verify-invite')) {
+        verifyInviteCode();
+        return;
+      }
+
       if (event.target.closest('#edit-username')) {
         usernameDraft = currentProfile?.username || '';
         usernameMessage = '';
@@ -1926,14 +2060,30 @@
     });
 
     document.getElementById('account-panel').addEventListener('input', event => {
-      if (event.target.id !== 'username-input') return;
-      usernameDraft = event.target.value;
-      usernameMessage = '';
-      usernameMessageType = '';
+      if (event.target.id === 'invite-code-input') {
+        inviteCodeDraft = event.target.value;
+        inviteMessage = '';
+        inviteMessageType = '';
+        return;
+      }
+
+      if (event.target.id === 'username-input') {
+        usernameDraft = event.target.value;
+        usernameMessage = '';
+        usernameMessageType = '';
+      }
     });
 
     document.getElementById('account-panel').addEventListener('keydown', event => {
-      if (event.key !== 'Enter' || event.target.id !== 'username-input') return;
+      if (event.key !== 'Enter') return;
+
+      if (event.target.id === 'invite-code-input') {
+        event.preventDefault();
+        verifyInviteCode();
+        return;
+      }
+
+      if (event.target.id !== 'username-input') return;
       event.preventDefault();
       saveUsername();
     });
