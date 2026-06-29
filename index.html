@@ -3,7 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>World Cup Bracket Challenge</title>
+  <meta name="description" content="Make your World Cup knockout predictions, lock your bracket, and follow the current standings with friends." />
+  <title>Late Start World Cup Bracket</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%2308111f'/%3E%3Ccircle cx='32' cy='32' r='20' fill='%23edf4ff'/%3E%3Cpath d='M32 12l7 14-7 7-7-7 7-14zm0 40l-7-14 7-7 7 7-7 14zM12 32l14-7 7 7-7 7-14-7zm40 0l-14 7-7-7 7-7 14 7z' fill='%230e7490'/%3E%3C/svg%3E" />
   <style>
     :root {
       color-scheme: dark;
@@ -96,33 +98,34 @@
       color: var(--red);
     }
 
-    .summary {
+    .how-to-play {
       display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 10px;
-      margin-bottom: 20px;
-    }
-
-    .summary-item {
-      min-width: 0;
-      padding: 12px 14px;
+      grid-template-columns: minmax(0, 1fr) minmax(260px, 0.7fr);
+      gap: 16px;
+      align-items: start;
+      margin-bottom: 18px;
+      padding: 16px;
       border: 1px solid var(--line);
       border-radius: 8px;
-      background: rgba(16, 27, 47, 0.76);
+      background: rgba(16, 27, 47, 0.72);
     }
 
-    .summary-label {
-      color: var(--faint);
-      font-size: 0.72rem;
-      font-weight: 750;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
+    .how-to-play h2 {
+      font-size: 1rem;
+      line-height: 1.2;
+      margin-bottom: 6px;
     }
 
-    .summary-value {
-      margin-top: 3px;
-      font-size: 1.08rem;
-      font-weight: 800;
+    .how-to-play p,
+    .how-to-play li {
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .how-to-play ol {
+      display: grid;
+      gap: 6px;
+      padding-left: 20px;
     }
 
     .action-panel {
@@ -152,6 +155,34 @@
       color: var(--muted);
       font-size: 0.84rem;
       overflow-wrap: anywhere;
+    }
+
+    .username-form {
+      display: grid;
+      gap: 8px;
+      margin-top: 10px;
+      max-width: 360px;
+    }
+
+    .username-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .username-row input {
+      flex: 1 1 190px;
+      min-height: 38px;
+      border: 1px solid var(--line-strong);
+      border-radius: 8px;
+      background: #0b1527;
+      color: var(--text);
+      padding: 7px 9px;
+    }
+
+    .username-help {
+      color: var(--faint);
+      font-size: 0.78rem;
     }
 
     .submit-controls {
@@ -241,6 +272,12 @@
       color: #ecfeff;
     }
 
+    .button.large {
+      width: 100%;
+      min-height: 46px;
+      font-size: 0.98rem;
+    }
+
     .button:disabled,
     .field input:disabled {
       cursor: not-allowed;
@@ -284,6 +321,13 @@
     }
 
     .leaderboard-subtitle {
+      color: var(--muted);
+      font-size: 0.82rem;
+    }
+
+    .leaderboard-note {
+      padding: 10px 14px;
+      border-top: 1px solid rgba(38, 54, 83, 0.72);
       color: var(--muted);
       font-size: 0.82rem;
     }
@@ -421,6 +465,11 @@
       background: rgba(16, 35, 45, 0.95);
     }
 
+    .readonly .match-card.future {
+      opacity: 1;
+      border-color: rgba(72, 213, 151, 0.26);
+    }
+
     .match-card.future {
       opacity: 0.86;
     }
@@ -552,6 +601,40 @@
       margin: 0 8px 8px;
     }
 
+    .bracket-submit-panel {
+      align-self: start;
+      display: grid;
+      gap: 10px;
+      margin: 0 8px 8px;
+      padding: 14px;
+      border: 1px solid rgba(56, 189, 248, 0.38);
+      border-radius: 8px;
+      background: rgba(14, 116, 144, 0.12);
+    }
+
+    .bracket-submit-title {
+      font-size: 0.98rem;
+      font-weight: 900;
+      line-height: 1.2;
+    }
+
+    .bracket-submit-copy {
+      color: var(--muted);
+      font-size: 0.86rem;
+    }
+
+    .bracket-submit-panel.submitted {
+      border-color: rgba(72, 213, 151, 0.48);
+      background: rgba(72, 213, 151, 0.1);
+    }
+
+    .missing-list {
+      display: grid;
+      gap: 3px;
+      color: var(--muted);
+      font-size: 0.82rem;
+    }
+
     .empty-state,
     .error-state {
       padding: 28px;
@@ -581,8 +664,8 @@
         white-space: normal;
       }
 
-      .summary {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+      .how-to-play {
+        grid-template-columns: 1fr;
       }
 
       .action-panel {
@@ -618,10 +701,6 @@
       .page {
         padding: 14px;
       }
-
-      .summary {
-        grid-template-columns: 1fr;
-      }
     }
   </style>
 </head>
@@ -629,17 +708,28 @@
   <main class="page">
     <header class="app-header">
       <div>
-        <h1>World Cup Bracket Challenge</h1>
-        <p class="subtitle">Static knockout bracket display from Round of 32 through the Final.</p>
+        <h1>Late Start World Cup Bracket</h1>
+        <p class="subtitle">Make your knockout picks, lock your bracket, and follow the standings with friends.</p>
       </div>
-      <div id="status" class="status">Loading matches...</div>
+      <div id="status" class="status">Loading bracket...</div>
     </header>
 
-    <section id="summary" class="summary" aria-label="Bracket summary"></section>
+    <section class="how-to-play" aria-label="How to play">
+      <div>
+        <h2>How it works</h2>
+        <p>Sign in with Google, pick every remaining knockout match, then submit once to lock your bracket.</p>
+      </div>
+      <ol>
+        <li>Complete your predictions through the Final and Third-Place Match.</li>
+        <li>Your submitted bracket is permanent.</li>
+        <li>Scores update automatically as official results come in.</li>
+        <li>Current Standings shows everyone&apos;s score.</li>
+      </ol>
+    </section>
     <section id="account-panel" class="action-panel" aria-live="polite"></section>
     <section id="leaderboard" class="leaderboard-panel" aria-live="polite"></section>
     <section id="app" aria-live="polite">
-      <div class="empty-state">Loading bracket data from Supabase.</div>
+      <div class="empty-state">Loading the bracket.</div>
     </section>
   </main>
 
@@ -660,6 +750,12 @@
     let baseMatches = [];
     let localPicks = {};
     let currentUser = null;
+    let currentProfile = null;
+    let usernameDraft = '';
+    let isEditingUsername = false;
+    let isSavingUsername = false;
+    let usernameMessage = '';
+    let usernameMessageType = '';
     let currentSubmission = null;
     let finalGoalsValue = '';
     let isSubmitting = false;
@@ -670,7 +766,7 @@
     let isLeaderboardLoading = false;
 
     if (SUPABASE_URL.includes('YOUR_PROJECT_ID') || SUPABASE_ANON_KEY.includes('YOUR_ANON')) {
-      showError('Fill in SUPABASE_URL and SUPABASE_ANON_KEY in js/config.js first.');
+      showError('App configuration is missing. Please try again later.');
       throw new Error('Supabase config not set');
     }
 
@@ -701,8 +797,23 @@
     }
 
     function userDisplayName(user) {
+      if (currentProfile?.username) return currentProfile.username;
       if (!user) return '';
-      return user.user_metadata?.full_name || user.user_metadata?.name || user.email || user.id;
+      return user.email || user.id;
+    }
+
+    function hasUsername() {
+      return Boolean(currentProfile?.username);
+    }
+
+    function validateUsername(value) {
+      const username = value.trim();
+      if (!username) return 'Username is required.';
+      if (username.length < 3 || username.length > 20) return 'Username must be 3 to 20 characters.';
+      if (!/^[A-Za-z0-9_ ]+$/.test(username)) {
+        return 'Use only letters, numbers, spaces, and underscores.';
+      }
+      return '';
     }
 
     function getEditableTeam(match, side) {
@@ -915,7 +1026,7 @@
 
       if (finalMatch && matches.some(match => match.round === '3P')) {
         const finalStart = items[finalMatch.id]?.start || 1;
-        maxRow = Math.max(maxRow, finalStart + (MATCH_CARD_ROWS * 2) + 4);
+        maxRow = Math.max(maxRow, finalStart + (MATCH_CARD_ROWS * 3) + 8);
       }
 
       return {
@@ -1045,6 +1156,7 @@
           <div class="round-matches" style="--bracket-rows: ${layout.rows}; height: ${layout.rows * BRACKET_ROW_HEIGHT}px;">
             ${roundMatches.map(match => renderMatchCard(match, layout.items[match.id])).join('')}
             ${roundKey === 'F' && thirdPlace ? renderThirdPlaceInFinalColumn(thirdPlace, layout) : ''}
+            ${roundKey === 'F' ? renderBracketSubmitPanel(matches, layout) : ''}
           </div>
         </section>`;
     }
@@ -1058,6 +1170,54 @@
         <section class="third-place" style="grid-row: ${start} / span ${MATCH_CARD_ROWS};" aria-label="Third-place match">
           <div class="third-place-title">Third-Place Match</div>
           ${renderMatchCard(match)}
+        </section>`;
+    }
+
+    function renderBracketSubmitPanel(matches, layout) {
+      const finalMatch = baseMatches.find(baseMatch => baseMatch.round === 'F');
+      const finalLayout = layout.items[finalMatch?.id] || Object.values(layout.items).at(-1);
+      const thirdPlace = matches.find(match => match.round === '3P');
+      const hasThirdPlace = Boolean(thirdPlace);
+      const start = finalLayout
+        ? finalLayout.start + MATCH_CARD_ROWS + (hasThirdPlace ? MATCH_CARD_ROWS + 4 : 3)
+        : 1;
+      const readiness = getSubmissionReadiness(matches);
+      const pickedCount = readiness.futureMatches.length - readiness.missing.length;
+      const needsFinalGoals = readiness.finalMatch?.local_winner && !readiness.hasValidFinalGoals;
+      const messageClass = formMessageType ? ` ${formMessageType}` : '';
+
+      if (isBracketReadOnly()) {
+        return `
+          <section class="bracket-submit-panel submitted" style="grid-row: ${start} / span 8;" aria-label="Submitted bracket confirmation">
+            <div class="bracket-submit-title">Your bracket has been submitted.</div>
+            <div class="bracket-submit-copy">Your predictions are locked and cannot be changed.</div>
+            ${formMessage ? `<div class="form-message${messageClass}">${escapeHtml(formMessage)}</div>` : ''}
+          </section>`;
+      }
+
+      const missingLines = [];
+      if (!currentUser) missingLines.push('Sign in with Google to submit.');
+      if (currentUser && !hasUsername()) missingLines.push('Choose a username before submitting.');
+      if (readiness.missing.length > 0) {
+        missingLines.push(`${pickedCount} of ${readiness.futureMatches.length} predictions complete.`);
+      }
+      if (needsFinalGoals) missingLines.push('Enter your Final goals tiebreaker.');
+      if (!readiness.finalMatch?.local_winner) missingLines.push('Pick a winner for the Final.');
+
+      const readyToSubmit = currentUser && hasUsername() && readiness.missing.length === 0 && readiness.hasValidFinalGoals;
+
+      return `
+        <section class="bracket-submit-panel" style="grid-row: ${start} / span 10;" aria-label="Submit bracket">
+          <div class="bracket-submit-title">Finished making your predictions?</div>
+          <div class="bracket-submit-copy">Submit your bracket to lock it in.</div>
+          ${readyToSubmit ? `
+            <button class="button primary large" id="submit-bracket" type="button" ${isSubmitting ? 'disabled' : ''}>
+              ${isSubmitting ? 'Submitting...' : 'Submit Bracket'}
+            </button>` : `
+            <div class="missing-list">
+              ${missingLines.map(line => `<div>${escapeHtml(line)}</div>`).join('')}
+            </div>`}
+          ${formMessage ? `<div class="form-message${messageClass}">${escapeHtml(formMessage)}</div>` : ''}
         </section>`;
     }
 
@@ -1105,22 +1265,6 @@
         </svg>`;
     }
 
-    function renderSummary(matches) {
-      const completed = matches.filter(match => match.is_completed).length;
-      const locked = matches.filter(match => matchState(match) === 'locked').length;
-      const pickedMatches = matches.filter(match => match.local_winner).length;
-      document.getElementById('summary').innerHTML = [
-        ['Matches', matches.length],
-        ['Completed', completed],
-        ['Locked', locked],
-        ['Local picks', pickedMatches]
-      ].map(([label, value]) => `
-        <div class="summary-item">
-          <div class="summary-label">${escapeHtml(label)}</div>
-          <div class="summary-value">${escapeHtml(value)}</div>
-        </div>`).join('');
-    }
-
     function getFuturePickMatches(matches) {
       return matches.filter(match => matchState(match) === 'future');
     }
@@ -1150,36 +1294,54 @@
       const readiness = getSubmissionReadiness(matches);
       const isSubmitted = isBracketReadOnly();
       const userName = userDisplayName(currentUser);
-      const disabledSubmit =
-        !currentUser ||
-        isSubmitted ||
-        isSubmitting ||
-        readiness.missing.length > 0;
+      const showUsernameForm = currentUser && (!hasUsername() || isEditingUsername);
 
       const title = currentUser
-        ? isSubmitted
-          ? `Submitted bracket for ${userName}`
-          : `Signed in as ${userName}`
+        ? hasUsername()
+          ? isSubmitted
+            ? `Submitted bracket for ${userName}`
+            : `Signed in as ${userName}`
+          : 'Choose your username'
         : 'Sign in to submit your bracket';
 
       const detail = currentUser
-        ? isSubmitted
-          ? `Locked on ${formatDate(currentSubmission.submitted_at)}.`
-          : `${readiness.futureMatches.length - readiness.missing.length} of ${readiness.futureMatches.length} picks complete.`
-        : 'You can view and test picks while logged out, but only Google-authenticated users can submit.';
+        ? !hasUsername()
+          ? 'Pick the name your friends will see in Current Standings.'
+          : isSubmitted
+            ? `Locked on ${formatDate(currentSubmission.submitted_at)}.`
+            : `${readiness.futureMatches.length - readiness.missing.length} of ${readiness.futureMatches.length} picks complete.`
+        : 'You can browse the bracket now. Sign in with Google when you are ready to submit.';
 
       const messageClass = formMessageType ? ` ${formMessageType}` : '';
+      const usernameMessageClass = usernameMessageType ? ` ${usernameMessageType}` : '';
 
       panel.innerHTML = `
         <div class="auth-copy">
           <div class="auth-title">${escapeHtml(title)}</div>
           <div class="auth-detail">${escapeHtml(detail)}</div>
+          ${showUsernameForm ? `
+            <div class="username-form">
+              <div class="username-row">
+                <input
+                  id="username-input"
+                  type="text"
+                  maxlength="20"
+                  value="${escapeHtml(usernameDraft)}"
+                  placeholder="Your username"
+                  ${isSavingUsername ? 'disabled' : ''}
+                />
+                <button class="button primary" id="save-username" type="button" ${isSavingUsername ? 'disabled' : ''}>
+                  ${isSavingUsername ? 'Saving...' : 'Save'}
+                </button>
+                ${hasUsername() ? `<button class="button" id="cancel-username-edit" type="button" ${isSavingUsername ? 'disabled' : ''}>Cancel</button>` : ''}
+              </div>
+              <div class="username-help">3-20 characters. Letters, numbers, spaces, and underscores only.</div>
+              ${usernameMessage ? `<div class="form-message${usernameMessageClass}">${escapeHtml(usernameMessage)}</div>` : ''}
+            </div>` : ''}
         </div>
         <div class="submit-controls">
           ${currentUser ? `
-            <button class="button primary" id="submit-bracket" type="button" ${disabledSubmit ? 'disabled' : ''}>
-              ${isSubmitting ? 'Submitting...' : isSubmitted ? 'Bracket locked' : 'Submit bracket'}
-            </button>
+            ${hasUsername() && !isEditingUsername ? `<button class="button" id="edit-username" type="button" ${isSavingUsername ? 'disabled' : ''}>Edit username</button>` : ''}
             <button class="button" id="sign-out" type="button" ${isSubmitting ? 'disabled' : ''}>Sign out</button>
           ` : `
             <button class="button primary" id="sign-in-google" type="button">Sign in with Google</button>
@@ -1222,11 +1384,11 @@
               <thead>
                 <tr>
                   <th>Rank</th>
-                  <th>User</th>
-                  <th>Total</th>
-                  <th>Correct</th>
-                  <th>Champion</th>
-                  <th>Final goals</th>
+                  <th>Username</th>
+                  <th>Total Points</th>
+                  <th>Correct Picks</th>
+                  <th>Champion Pick</th>
+                  <th>Final Goals Tiebreaker</th>
                 </tr>
               </thead>
               <tbody>${rows}</tbody>
@@ -1234,7 +1396,8 @@
           </div>` : `
           <div class="leaderboard-empty">
             ${leaderboardError ? 'Standings unavailable.' : 'No submitted brackets yet.'}
-          </div>`}`;
+          </div>`}
+        <div class="leaderboard-note">Scores update automatically after official World Cup results are synced.</div>`;
     }
 
     async function loadLeaderboard() {
@@ -1259,7 +1422,6 @@
 
     function renderApp() {
       const matches = deriveMatches();
-      renderSummary(matches);
       renderAccountPanel(matches);
       renderLeaderboard();
       renderBracket(matches);
@@ -1272,7 +1434,7 @@
       document.getElementById('app').innerHTML = `
         <div class="bracket-shell">
           <div class="bracket-scroll">
-            <div class="bracket">
+            <div class="bracket ${isBracketReadOnly() ? 'readonly' : ''}">
               ${renderConnectors(matches, layout)}
               ${ROUND_ORDER.map(roundKey => renderRound(roundKey, matches, layout, thirdPlace)).join('')}
             </div>
@@ -1308,12 +1470,84 @@
     async function signOut() {
       await db.auth.signOut();
       currentUser = null;
+      currentProfile = null;
+      usernameDraft = '';
+      isEditingUsername = false;
+      usernameMessage = '';
+      usernameMessageType = '';
       currentSubmission = null;
       localPicks = {};
       finalGoalsValue = '';
       formMessage = '';
       formMessageType = '';
       renderApp();
+    }
+
+    async function loadUserProfile() {
+      currentProfile = null;
+      usernameDraft = '';
+      isEditingUsername = false;
+      usernameMessage = '';
+      usernameMessageType = '';
+
+      if (!currentUser) return;
+
+      const { data, error } = await db
+        .from('users')
+        .select('id, username')
+        .eq('id', currentUser.id)
+        .maybeSingle();
+
+      if (error) {
+        usernameMessage = `Could not load username: ${error.message}`;
+        usernameMessageType = 'error';
+        return;
+      }
+
+      currentProfile = data;
+      usernameDraft = data?.username || '';
+      isEditingUsername = !data?.username;
+    }
+
+    async function saveUsername() {
+      if (!currentUser || isSavingUsername) return;
+
+      const validationError = validateUsername(usernameDraft);
+      if (validationError) {
+        usernameMessage = validationError;
+        usernameMessageType = 'error';
+        renderApp();
+        return;
+      }
+
+      isSavingUsername = true;
+      usernameMessage = '';
+      usernameMessageType = '';
+      renderApp();
+
+      const { data, error } = await db.rpc('update_username', {
+        username_input: usernameDraft.trim()
+      });
+
+      isSavingUsername = false;
+
+      if (error) {
+        usernameMessage = error.message;
+        usernameMessageType = 'error';
+        renderApp();
+        return;
+      }
+
+      currentProfile = {
+        id: currentUser.id,
+        username: data?.username || usernameDraft.trim()
+      };
+      usernameDraft = currentProfile.username;
+      isEditingUsername = false;
+      usernameMessage = 'Username saved.';
+      usernameMessageType = 'ok';
+      renderApp();
+      await loadLeaderboard();
     }
 
     async function loadSubmittedBracket() {
@@ -1374,6 +1608,14 @@
     async function submitBracket() {
       if (!currentUser || isBracketReadOnly() || isSubmitting) return;
 
+      if (!hasUsername()) {
+        formMessage = 'Choose a username before submitting.';
+        formMessageType = 'error';
+        isEditingUsername = true;
+        renderApp();
+        return;
+      }
+
       const matches = deriveMatches();
       const readiness = getSubmissionReadiness(matches);
 
@@ -1430,11 +1672,17 @@
     async function initAuth() {
       const { data: sessionData } = await db.auth.getSession();
       currentUser = sessionData.session?.user || null;
+      await loadUserProfile();
       await loadSubmittedBracket();
 
       db.auth.onAuthStateChange(async (_event, session) => {
         currentUser = session?.user || null;
         if (!currentUser) {
+          currentProfile = null;
+          usernameDraft = '';
+          isEditingUsername = false;
+          usernameMessage = '';
+          usernameMessageType = '';
           currentSubmission = null;
           localPicks = {};
           finalGoalsValue = '';
@@ -1444,6 +1692,7 @@
           return;
         }
 
+        await loadUserProfile();
         await loadSubmittedBracket();
       });
     }
@@ -1475,10 +1724,10 @@
           .order('id', { ascending: true });
 
         if (error) throw error;
-        if (!data || data.length === 0) throw new Error('No matches returned from Supabase.');
+        if (!data || data.length === 0) throw new Error('No matches are available yet.');
 
         statusEl.className = 'status ok';
-        statusEl.textContent = `${data.length} matches loaded`;
+        statusEl.textContent = 'Bracket ready';
         baseMatches = data;
         localPicks = sanitizePicks(localPicks);
         renderApp();
@@ -1488,6 +1737,11 @@
     }
 
     document.getElementById('app').addEventListener('click', event => {
+      if (event.target.closest('#submit-bracket')) {
+        submitBracket();
+        return;
+      }
+
       const teamRow = event.target.closest('[data-match-id][data-team]');
       if (!teamRow) return;
       selectWinner(Number(teamRow.dataset.matchId), teamRow.dataset.team);
@@ -1521,9 +1775,40 @@
         return;
       }
 
-      if (event.target.closest('#submit-bracket')) {
-        submitBracket();
+      if (event.target.closest('#edit-username')) {
+        usernameDraft = currentProfile?.username || '';
+        usernameMessage = '';
+        usernameMessageType = '';
+        isEditingUsername = true;
+        renderApp();
+        return;
       }
+
+      if (event.target.closest('#cancel-username-edit')) {
+        usernameDraft = currentProfile?.username || '';
+        usernameMessage = '';
+        usernameMessageType = '';
+        isEditingUsername = false;
+        renderApp();
+        return;
+      }
+
+      if (event.target.closest('#save-username')) {
+        saveUsername();
+      }
+    });
+
+    document.getElementById('account-panel').addEventListener('input', event => {
+      if (event.target.id !== 'username-input') return;
+      usernameDraft = event.target.value;
+      usernameMessage = '';
+      usernameMessageType = '';
+    });
+
+    document.getElementById('account-panel').addEventListener('keydown', event => {
+      if (event.key !== 'Enter' || event.target.id !== 'username-input') return;
+      event.preventDefault();
+      saveUsername();
     });
 
     document.getElementById('leaderboard').addEventListener('click', event => {
