@@ -1,0 +1,1331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>World Cup Bracket Challenge</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #08111f;
+      --panel: #101b2f;
+      --panel-strong: #16243c;
+      --line: #263653;
+      --line-strong: #3c5278;
+      --text: #edf4ff;
+      --muted: #9caeca;
+      --faint: #657792;
+      --accent: #38bdf8;
+      --gold: #f5c542;
+      --green: #48d597;
+      --red: #ff6b6b;
+      --bracket-row-height: 16px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at top left, rgba(56, 189, 248, 0.18), transparent 30rem),
+        linear-gradient(135deg, #08111f 0%, #111827 48%, #0b1829 100%);
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.5;
+    }
+
+    button,
+    input,
+    textarea,
+    select {
+      font: inherit;
+    }
+
+    .page {
+      width: min(100%, 1680px);
+      margin: 0 auto;
+      padding: 28px;
+    }
+
+    .app-header {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 20px;
+      margin-bottom: 22px;
+    }
+
+    h1 {
+      font-size: clamp(1.7rem, 3vw, 2.9rem);
+      letter-spacing: 0;
+      line-height: 1.05;
+    }
+
+    .subtitle {
+      max-width: 700px;
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 0.98rem;
+    }
+
+    .status {
+      display: inline-flex;
+      align-items: center;
+      min-height: 38px;
+      padding: 8px 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(16, 27, 47, 0.8);
+      color: var(--muted);
+      font-size: 0.88rem;
+      font-weight: 650;
+      white-space: nowrap;
+    }
+
+    .status.ok {
+      border-color: rgba(72, 213, 151, 0.55);
+      color: var(--green);
+    }
+
+    .status.err {
+      border-color: rgba(255, 107, 107, 0.7);
+      color: var(--red);
+    }
+
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .summary-item {
+      min-width: 0;
+      padding: 12px 14px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(16, 27, 47, 0.76);
+    }
+
+    .summary-label {
+      color: var(--faint);
+      font-size: 0.72rem;
+      font-weight: 750;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .summary-value {
+      margin-top: 3px;
+      font-size: 1.08rem;
+      font-weight: 800;
+    }
+
+    .action-panel {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 16px;
+      align-items: center;
+      margin-bottom: 20px;
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(16, 27, 47, 0.82);
+    }
+
+    .auth-copy {
+      display: grid;
+      gap: 4px;
+      min-width: 0;
+    }
+
+    .auth-title {
+      font-size: 0.92rem;
+      font-weight: 850;
+    }
+
+    .auth-detail {
+      color: var(--muted);
+      font-size: 0.84rem;
+      overflow-wrap: anywhere;
+    }
+
+    .submit-controls {
+      display: flex;
+      align-items: end;
+      justify-content: flex-end;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .field {
+      display: grid;
+      gap: 5px;
+    }
+
+    .field label {
+      color: var(--faint);
+      font-size: 0.72rem;
+      font-weight: 800;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+    }
+
+    .field input {
+      width: 118px;
+      min-height: 38px;
+      border: 1px solid var(--line-strong);
+      border-radius: 8px;
+      background: #0b1527;
+      color: var(--text);
+      padding: 7px 9px;
+    }
+
+    .button {
+      min-height: 38px;
+      border: 1px solid var(--line-strong);
+      border-radius: 8px;
+      background: var(--panel-strong);
+      color: var(--text);
+      padding: 8px 12px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .button:hover:not(:disabled) {
+      border-color: rgba(56, 189, 248, 0.75);
+      background: #1d3150;
+    }
+
+    .button.primary {
+      border-color: rgba(56, 189, 248, 0.75);
+      background: #0e7490;
+      color: #ecfeff;
+    }
+
+    .button:disabled,
+    .field input:disabled {
+      cursor: not-allowed;
+      opacity: 0.55;
+    }
+
+    .form-message {
+      grid-column: 1 / -1;
+      color: var(--muted);
+      font-size: 0.84rem;
+    }
+
+    .form-message.error {
+      color: #ffd2d2;
+    }
+
+    .form-message.ok {
+      color: var(--green);
+    }
+
+    .bracket-shell {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(8, 17, 31, 0.72);
+      overflow: hidden;
+    }
+
+    .bracket-scroll {
+      overflow-x: auto;
+      padding: 14px;
+    }
+
+    .bracket {
+      position: relative;
+      display: grid;
+      grid-template-columns: repeat(5, minmax(230px, 1fr));
+      gap: 18px;
+      min-width: 1240px;
+      align-items: start;
+      isolation: isolate;
+    }
+
+    .connector-layer {
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      overflow: visible;
+    }
+
+    .connector-line {
+      fill: none;
+      stroke: rgba(156, 174, 202, 0.36);
+      stroke-width: 2;
+      vector-effect: non-scaling-stroke;
+    }
+
+    .round {
+      position: relative;
+      z-index: 1;
+      min-width: 0;
+    }
+
+    .round-header {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      height: 52px;
+      padding: 8px 4px 10px;
+      background: rgba(8, 17, 31, 0.92);
+    }
+
+    .round-title {
+      font-size: 0.86rem;
+      font-weight: 850;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+    }
+
+    .round-meta {
+      color: var(--faint);
+      font-size: 0.76rem;
+    }
+
+    .round-matches {
+      display: grid;
+      grid-template-rows: repeat(var(--bracket-rows), var(--bracket-row-height));
+    }
+
+    .match-card {
+      align-self: center;
+      min-height: 184px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(16, 27, 47, 0.92);
+      overflow: visible;
+    }
+
+    .match-card.completed,
+    .match-card.locked {
+      border-color: rgba(72, 213, 151, 0.36);
+      background: rgba(16, 35, 45, 0.95);
+    }
+
+    .match-card.future {
+      opacity: 0.86;
+    }
+
+    .match-topline {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 8px 10px;
+      border-bottom: 1px solid rgba(38, 54, 83, 0.8);
+      color: var(--muted);
+      font-size: 0.76rem;
+      font-weight: 700;
+    }
+
+    .match-topline span:first-child {
+      min-width: 0;
+    }
+
+    .match-status {
+      flex: 0 0 auto;
+      color: var(--faint);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      font-size: 0.68rem;
+    }
+
+    .match-status.completed,
+    .match-status.locked {
+      color: var(--green);
+    }
+
+    .teams {
+      display: grid;
+      gap: 1px;
+      padding: 8px;
+    }
+
+    .team-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 8px;
+      align-items: center;
+      min-height: 34px;
+      padding: 6px 8px;
+      border-radius: 6px;
+      color: var(--text);
+    }
+
+    .team-row.selectable {
+      cursor: pointer;
+    }
+
+    .team-row.selectable:hover {
+      background: rgba(56, 189, 248, 0.11);
+      color: #ffffff;
+    }
+
+    .team-row.winner {
+      background: rgba(245, 197, 66, 0.12);
+      color: #fff5c7;
+      font-weight: 850;
+    }
+
+    .team-row.selected {
+      outline: 1px solid rgba(245, 197, 66, 0.72);
+      background: rgba(245, 197, 66, 0.16);
+      color: #fff8d6;
+      font-weight: 850;
+    }
+
+    .team-name {
+      overflow-wrap: anywhere;
+    }
+
+    .team-name.tbd {
+      color: var(--faint);
+      font-style: italic;
+    }
+
+    .score {
+      min-width: 1.4rem;
+      color: var(--muted);
+      text-align: right;
+      font-weight: 800;
+    }
+
+    .winner .score {
+      color: var(--gold);
+    }
+
+    .match-footer {
+      display: grid;
+      gap: 3px;
+      padding: 0 10px 10px;
+      color: var(--faint);
+      font-size: 0.74rem;
+      overflow-wrap: anywhere;
+    }
+
+    .official-winner {
+      color: var(--gold);
+      font-weight: 800;
+    }
+
+    .local-pick {
+      color: var(--accent);
+      font-weight: 800;
+    }
+
+    .third-place {
+      display: grid;
+      grid-template-columns: minmax(240px, 420px) minmax(0, 1fr);
+      gap: 16px;
+      align-items: start;
+      margin-top: 20px;
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(16, 27, 47, 0.62);
+    }
+
+    .third-place h2 {
+      font-size: 1rem;
+      line-height: 1.2;
+    }
+
+    .third-place p {
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 0.86rem;
+    }
+
+    .empty-state,
+    .error-state {
+      padding: 28px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(16, 27, 47, 0.8);
+      color: var(--muted);
+    }
+
+    .error-state {
+      border-color: rgba(255, 107, 107, 0.7);
+      color: #ffd2d2;
+      white-space: pre-wrap;
+    }
+
+    @media (max-width: 900px) {
+      .page {
+        padding: 18px;
+      }
+
+      .app-header {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .status {
+        white-space: normal;
+      }
+
+      .summary {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .action-panel {
+        grid-template-columns: 1fr;
+      }
+
+      .submit-controls {
+        justify-content: flex-start;
+      }
+
+      .bracket-shell {
+        border: 1px solid var(--line);
+        background: rgba(8, 17, 31, 0.72);
+      }
+
+      .bracket-scroll {
+        overflow-x: auto;
+        padding: 12px;
+      }
+
+      .round-header {
+        padding-top: 4px;
+      }
+
+      .third-place {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 520px) {
+      .page {
+        padding: 14px;
+      }
+
+      .summary {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="app-header">
+      <div>
+        <h1>World Cup Bracket Challenge</h1>
+        <p class="subtitle">Static knockout bracket display from Round of 32 through the Final.</p>
+      </div>
+      <div id="status" class="status">Loading matches...</div>
+    </header>
+
+    <section id="summary" class="summary" aria-label="Bracket summary"></section>
+    <section id="account-panel" class="action-panel" aria-live="polite"></section>
+    <section id="app" aria-live="polite">
+      <div class="empty-state">Loading bracket data from Supabase.</div>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/config.js"></script>
+  <script>
+    const { createClient } = supabase;
+
+    const ROUND_ORDER = ['R32', 'R16', 'QF', 'SF', 'F'];
+    const ROUND_MATCH_COUNTS = { R32: 16, R16: 8, QF: 4, SF: 2, F: 1, '3P': 1 };
+    const ROUND_COLUMN_WIDTH = 230;
+    const ROUND_COLUMN_GAP = 18;
+    const ROUND_HEADER_HEIGHT = 52;
+    const BRACKET_ROW_HEIGHT = 16;
+    const LEAF_ROW_STEP = 17;
+    const LEAF_ROW_CENTER = 9;
+    const MATCH_CARD_ROWS = 15;
+    let baseMatches = [];
+    let localPicks = {};
+    let currentUser = null;
+    let currentSubmission = null;
+    let finalGoalsValue = '';
+    let isSubmitting = false;
+    let formMessage = '';
+    let formMessageType = '';
+
+    if (SUPABASE_URL.includes('YOUR_PROJECT_ID') || SUPABASE_ANON_KEY.includes('YOUR_ANON')) {
+      showError('Fill in SUPABASE_URL and SUPABASE_ANON_KEY in js/config.js first.');
+      throw new Error('Supabase config not set');
+    }
+
+    const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    function escapeHtml(value) {
+      return String(value ?? '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;');
+    }
+
+    function formatDate(value) {
+      if (!value) return 'Date TBD';
+      return new Intl.DateTimeFormat('en-US', {
+        month: 'short',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+        timeZoneName: 'short'
+      }).format(new Date(value));
+    }
+
+    function isBracketReadOnly() {
+      return Boolean(currentSubmission?.is_locked);
+    }
+
+    function userDisplayName(user) {
+      if (!user) return '';
+      return user.user_metadata?.full_name || user.user_metadata?.name || user.email || user.id;
+    }
+
+    function getEditableTeam(match, side) {
+      if (isBracketReadOnly()) return null;
+      if (matchState(match) !== 'future') return null;
+      const team = match[`${side}_team`];
+      return team && match.home_team && match.away_team ? team : null;
+    }
+
+    function getMatchWinner(match) {
+      return match.winner || match.local_winner || null;
+    }
+
+    function getMatchLoser(match) {
+      const winner = getMatchWinner(match);
+      if (!winner || !match.home_team || !match.away_team) return null;
+      if (match.home_team === winner) return match.away_team;
+      if (match.away_team === winner) return match.home_team;
+      return null;
+    }
+
+    function deriveMatches(picks = localPicks) {
+      const byId = new Map();
+      const derived = baseMatches
+        .map(match => ({ ...match, local_winner: null }))
+        .sort((a, b) => a.id - b.id);
+
+      derived.forEach(match => {
+        ['home', 'away'].forEach(side => {
+          const sourceId = match[`${side}_source_match_id`];
+          if (!sourceId) return;
+
+          const sourceMatch = byId.get(sourceId);
+          if (!sourceMatch) return;
+
+          const advancedTeam = match[`${side}_source_is_loser`]
+            ? getMatchLoser(sourceMatch)
+            : getMatchWinner(sourceMatch);
+
+          if (advancedTeam) {
+            match[`${side}_team`] = advancedTeam;
+          }
+        });
+
+        const pickedWinner = picks[match.id];
+        if (
+          matchState(match) === 'future' &&
+          pickedWinner &&
+          (match.home_team === pickedWinner || match.away_team === pickedWinner)
+        ) {
+          match.local_winner = pickedWinner;
+        }
+
+        byId.set(match.id, match);
+      });
+
+      return derived;
+    }
+
+    function sanitizePicks(picks) {
+      let nextPicks = { ...picks };
+      let changed = true;
+
+      while (changed) {
+        changed = false;
+        const matches = deriveMatches(nextPicks);
+
+        matches.forEach(match => {
+          const pickedWinner = nextPicks[match.id];
+          if (!pickedWinner) return;
+
+          const isValid =
+            matchState(match) === 'future' &&
+            match.home_team &&
+            match.away_team &&
+            (match.home_team === pickedWinner || match.away_team === pickedWinner);
+
+          if (!isValid) {
+            delete nextPicks[match.id];
+            changed = true;
+          }
+        });
+      }
+
+      return nextPicks;
+    }
+
+    function getDownstreamMatchIds(matchId) {
+      const pending = [matchId];
+      const downstream = new Set();
+
+      while (pending.length) {
+        const currentId = pending.shift();
+        baseMatches.forEach(match => {
+          const dependsOnCurrent =
+            match.home_source_match_id === currentId ||
+            match.away_source_match_id === currentId;
+
+          if (dependsOnCurrent && !downstream.has(match.id)) {
+            downstream.add(match.id);
+            pending.push(match.id);
+          }
+        });
+      }
+
+      return downstream;
+    }
+
+    function selectWinner(matchId, team) {
+      if (isBracketReadOnly()) return;
+
+      const currentPick = localPicks[matchId];
+      if (currentPick === team) return;
+
+      const nextPicks = { ...localPicks, [matchId]: team };
+      getDownstreamMatchIds(matchId).forEach(id => {
+        delete nextPicks[id];
+      });
+
+      localPicks = sanitizePicks(nextPicks);
+      renderApp();
+    }
+
+    function getWinnerSourceIds(match) {
+      return ['home', 'away']
+        .map(side => ({
+          id: match[`${side}_source_match_id`],
+          isLoser: match[`${side}_source_is_loser`]
+        }))
+        .filter(source => source.id && !source.isLoser)
+        .map(source => source.id);
+    }
+
+    function calculateBracketLayout(matches) {
+      const mainMatches = matches.filter(match => match.round !== '3P');
+      const byId = new Map(mainMatches.map(match => [match.id, match]));
+      const finalMatch = mainMatches.find(match => match.round === 'F');
+      const leafOrder = [];
+      const seenLeaves = new Set();
+
+      function addLeaf(matchId) {
+        if (!seenLeaves.has(matchId)) {
+          seenLeaves.add(matchId);
+          leafOrder.push(matchId);
+        }
+      }
+
+      function collectLeaves(matchId) {
+        const match = byId.get(matchId);
+        if (!match) return;
+
+        const sourceIds = getWinnerSourceIds(match);
+        if (sourceIds.length === 0) {
+          addLeaf(matchId);
+          return;
+        }
+
+        sourceIds.forEach(collectLeaves);
+      }
+
+      if (finalMatch) {
+        collectLeaves(finalMatch.id);
+      }
+
+      mainMatches
+        .filter(match => getWinnerSourceIds(match).length === 0)
+        .sort((a, b) => a.match_number - b.match_number)
+        .forEach(match => addLeaf(match.id));
+
+      const centers = new Map();
+      leafOrder.forEach((matchId, index) => {
+        centers.set(matchId, index * LEAF_ROW_STEP + LEAF_ROW_CENTER);
+      });
+
+      function centerFor(matchId) {
+        if (centers.has(matchId)) return centers.get(matchId);
+
+        const match = byId.get(matchId);
+        if (!match) return LEAF_ROW_CENTER;
+
+        const sourceCenters = getWinnerSourceIds(match)
+          .map(centerFor)
+          .filter(Number.isFinite);
+
+        if (sourceCenters.length === 0) {
+          const fallbackIndex = leafOrder.length;
+          addLeaf(matchId);
+          centers.set(matchId, fallbackIndex * LEAF_ROW_STEP + LEAF_ROW_CENTER);
+          return centers.get(matchId);
+        }
+
+        const center = Math.round(sourceCenters.reduce((sum, value) => sum + value, 0) / sourceCenters.length);
+        centers.set(matchId, center);
+        return center;
+      }
+
+      mainMatches.forEach(match => centerFor(match.id));
+
+      const halfSpan = Math.floor(MATCH_CARD_ROWS / 2);
+      const items = {};
+      let maxRow = 0;
+
+      mainMatches.forEach(match => {
+        const center = centerFor(match.id);
+        const start = Math.max(1, center - halfSpan);
+        const end = start + MATCH_CARD_ROWS;
+        items[match.id] = { center, start };
+        maxRow = Math.max(maxRow, end);
+      });
+
+      return {
+        items,
+        rows: maxRow + halfSpan
+      };
+    }
+
+    function sourceLabel(match, side) {
+      const team = match[`${side}_team`];
+      if (team) return team;
+
+      const sourceId = match[`${side}_source_match_id`];
+      const isLoser = match[`${side}_source_is_loser`];
+      if (sourceId) return `${isLoser ? 'Loser' : 'Winner'} M${sourceId}`;
+
+      return 'TBD';
+    }
+
+    function matchState(match) {
+      if (PRE_CHALLENGE_MATCH_IDS.includes(match.id)) return 'locked';
+      if (match.is_completed) return 'completed';
+      return 'future';
+    }
+
+    function renderTeam(match, side) {
+      const teamName = sourceLabel(match, side);
+      const score = match[`${side}_score`];
+      const isKnownTeam = Boolean(match[`${side}_team`]);
+      const editableTeam = getEditableTeam(match, side);
+      const isOfficialWinner = isKnownTeam && match.winner === match[`${side}_team`];
+      const isSelectedWinner = isKnownTeam && match.local_winner === match[`${side}_team`];
+      const classes = [
+        'team-row',
+        editableTeam ? 'selectable' : '',
+        isOfficialWinner ? 'winner' : '',
+        isSelectedWinner ? 'selected' : ''
+      ].filter(Boolean).join(' ');
+      const nameClasses = ['team-name', isKnownTeam ? '' : 'tbd'].filter(Boolean).join(' ');
+      const clickAttrs = editableTeam
+        ? ` role="button" tabindex="0" data-match-id="${match.id}" data-team="${escapeHtml(editableTeam)}"`
+        : '';
+
+      return `
+        <div class="${classes}"${clickAttrs}>
+          <span class="${nameClasses}" title="${escapeHtml(teamName)}">${escapeHtml(teamName)}</span>
+          <span class="score">${Number.isInteger(score) ? score : ''}</span>
+        </div>`;
+    }
+
+    function renderMatchCard(match, layoutItem = null) {
+      const state = matchState(match);
+      const statusLabel = state === 'locked' ? 'Locked' : match.is_completed ? 'Complete' : 'Future';
+      const winnerLine = match.winner
+        ? `<div class="official-winner">Official winner: ${escapeHtml(match.winner)}</div>`
+        : '';
+      const pickLine = match.local_winner
+        ? `<div class="local-pick">Your pick: ${escapeHtml(match.local_winner)}</div>`
+        : '';
+      const styleAttr = layoutItem
+        ? ` style="grid-row: ${layoutItem.start} / span ${MATCH_CARD_ROWS};"`
+        : '';
+
+      return `
+        <article class="match-card ${state}"${styleAttr}>
+          <div class="match-topline">
+            <span>M${match.id} &middot; ${escapeHtml(ROUND_LABELS[match.round] || match.round)} ${match.match_number}</span>
+            <span class="match-status ${state === 'future' ? '' : state}">${statusLabel}</span>
+          </div>
+          <div class="teams">
+            ${renderTeam(match, 'home')}
+            ${renderTeam(match, 'away')}
+          </div>
+          <div class="match-footer">
+            ${winnerLine}
+            ${pickLine}
+            <div>${formatDate(match.scheduled_at)}</div>
+            <div>${escapeHtml(match.venue || 'Venue TBD')} &middot; ${match.round_points} pts</div>
+          </div>
+        </article>`;
+    }
+
+    function renderRound(roundKey, matches, layout) {
+      const roundMatches = matches
+        .filter(match => match.round === roundKey)
+        .sort((a, b) => {
+          const aCenter = layout.items[a.id]?.center ?? 0;
+          const bCenter = layout.items[b.id]?.center ?? 0;
+          return aCenter - bCenter || a.match_number - b.match_number;
+        });
+
+      return `
+        <section class="round" aria-label="${escapeHtml(ROUND_LABELS[roundKey] || roundKey)}">
+          <div class="round-header">
+            <div class="round-title">${escapeHtml(ROUND_LABELS[roundKey] || roundKey)}</div>
+            <div class="round-meta">${roundMatches.length} of ${ROUND_MATCH_COUNTS[roundKey]} matches</div>
+          </div>
+          <div class="round-matches" style="--bracket-rows: ${layout.rows}; height: ${layout.rows * BRACKET_ROW_HEIGHT}px;">
+            ${roundMatches.map(match => renderMatchCard(match, layout.items[match.id])).join('')}
+          </div>
+        </section>`;
+    }
+
+    function layoutCenterY(layoutItem) {
+      return ROUND_HEADER_HEIGHT + ((layoutItem.start - 1 + MATCH_CARD_ROWS / 2) * BRACKET_ROW_HEIGHT);
+    }
+
+    function renderConnectors(matches, layout) {
+      const mainMatches = matches.filter(match => match.round !== '3P');
+      const viewBoxWidth = (ROUND_ORDER.length * ROUND_COLUMN_WIDTH) + ((ROUND_ORDER.length - 1) * ROUND_COLUMN_GAP);
+      const viewBoxHeight = ROUND_HEADER_HEIGHT + (layout.rows * BRACKET_ROW_HEIGHT);
+
+      const paths = mainMatches
+        .filter(match => ROUND_ORDER.indexOf(match.round) > 0)
+        .map(match => {
+          const sourceIds = getWinnerSourceIds(match);
+          if (sourceIds.length !== 2) return '';
+
+          const sourceItems = sourceIds.map(id => layout.items[id]);
+          const targetItem = layout.items[match.id];
+          if (!sourceItems[0] || !sourceItems[1] || !targetItem) return '';
+
+          const targetRoundIndex = ROUND_ORDER.indexOf(match.round);
+          const sourceRoundIndex = targetRoundIndex - 1;
+          const sourceX = sourceRoundIndex * (ROUND_COLUMN_WIDTH + ROUND_COLUMN_GAP) + ROUND_COLUMN_WIDTH;
+          const targetX = targetRoundIndex * (ROUND_COLUMN_WIDTH + ROUND_COLUMN_GAP);
+          const midX = sourceX + ((targetX - sourceX) / 2);
+          const y1 = layoutCenterY(sourceItems[0]);
+          const y2 = layoutCenterY(sourceItems[1]);
+          const targetY = layoutCenterY(targetItem);
+
+          return `
+            <path class="connector-line" d="
+              M ${sourceX} ${y1} H ${midX}
+              M ${sourceX} ${y2} H ${midX}
+              M ${midX} ${y1} V ${y2}
+              M ${midX} ${targetY} H ${targetX}
+            " />`;
+        })
+        .join('');
+
+      return `
+        <svg class="connector-layer" viewBox="0 0 ${viewBoxWidth} ${viewBoxHeight}" preserveAspectRatio="none" aria-hidden="true">
+          ${paths}
+        </svg>`;
+    }
+
+    function renderSummary(matches) {
+      const completed = matches.filter(match => match.is_completed).length;
+      const locked = matches.filter(match => matchState(match) === 'locked').length;
+      const pickedMatches = matches.filter(match => match.local_winner).length;
+      const canadaAdvanced = matches.some(match => match.id !== 73 && (match.home_team === 'Canada' || match.away_team === 'Canada'));
+
+      document.getElementById('summary').innerHTML = [
+        ['Matches', matches.length],
+        ['Completed', completed],
+        ['Locked', locked],
+        ['Local picks', pickedMatches],
+        ['Canada advanced', canadaAdvanced ? 'Yes' : 'No']
+      ].map(([label, value]) => `
+        <div class="summary-item">
+          <div class="summary-label">${escapeHtml(label)}</div>
+          <div class="summary-value">${escapeHtml(value)}</div>
+        </div>`).join('');
+    }
+
+    function getFuturePickMatches(matches) {
+      return matches.filter(match => matchState(match) === 'future');
+    }
+
+    function getSubmissionReadiness(matches) {
+      const futureMatches = getFuturePickMatches(matches);
+      const missing = futureMatches.filter(match => !match.local_winner);
+      const finalMatch = matches.find(match => match.round === 'F');
+      const finalGoals = Number(finalGoalsValue);
+      const hasValidFinalGoals =
+        finalGoalsValue !== '' &&
+        Number.isInteger(finalGoals) &&
+        finalGoals >= 0;
+
+      return {
+        futureMatches,
+        missing,
+        finalMatch,
+        finalGoals,
+        hasValidFinalGoals,
+        isComplete: missing.length === 0 && hasValidFinalGoals
+      };
+    }
+
+    function renderAccountPanel(matches) {
+      const panel = document.getElementById('account-panel');
+      const readiness = getSubmissionReadiness(matches);
+      const isSubmitted = isBracketReadOnly();
+      const userName = userDisplayName(currentUser);
+      const disabledSubmit =
+        !currentUser ||
+        isSubmitted ||
+        isSubmitting ||
+        readiness.missing.length > 0;
+
+      const title = currentUser
+        ? isSubmitted
+          ? `Submitted bracket for ${userName}`
+          : `Signed in as ${userName}`
+        : 'Sign in to submit your bracket';
+
+      const detail = currentUser
+        ? isSubmitted
+          ? `Locked on ${formatDate(currentSubmission.submitted_at)}. Final goals tiebreaker: ${currentSubmission.final_goals_tiebreaker}.`
+          : `${readiness.futureMatches.length - readiness.missing.length} of ${readiness.futureMatches.length} picks complete.`
+        : 'You can view and test picks while logged out, but only Google-authenticated users can submit.';
+
+      const messageClass = formMessageType ? ` ${formMessageType}` : '';
+
+      panel.innerHTML = `
+        <div class="auth-copy">
+          <div class="auth-title">${escapeHtml(title)}</div>
+          <div class="auth-detail">${escapeHtml(detail)}</div>
+        </div>
+        <div class="submit-controls">
+          ${currentUser ? `
+            <div class="field">
+              <label for="final-goals">Final goals</label>
+              <input
+                id="final-goals"
+                type="number"
+                min="0"
+                step="1"
+                inputmode="numeric"
+                value="${escapeHtml(finalGoalsValue)}"
+                ${isSubmitted || isSubmitting ? 'disabled' : ''}
+              />
+            </div>
+            <button class="button primary" id="submit-bracket" type="button" ${disabledSubmit ? 'disabled' : ''}>
+              ${isSubmitting ? 'Submitting...' : isSubmitted ? 'Bracket locked' : 'Submit bracket'}
+            </button>
+            <button class="button" id="sign-out" type="button" ${isSubmitting ? 'disabled' : ''}>Sign out</button>
+          ` : `
+            <button class="button primary" id="sign-in-google" type="button">Sign in with Google</button>
+          `}
+          ${formMessage ? `<div class="form-message${messageClass}">${escapeHtml(formMessage)}</div>` : ''}
+        </div>`;
+    }
+
+    function renderApp() {
+      const matches = deriveMatches();
+      renderSummary(matches);
+      renderAccountPanel(matches);
+      renderBracket(matches);
+    }
+
+    function renderBracket(matches) {
+      const thirdPlace = matches.find(match => match.round === '3P');
+      const layout = calculateBracketLayout(matches);
+
+      document.getElementById('app').innerHTML = `
+        <div class="bracket-shell">
+          <div class="bracket-scroll">
+            <div class="bracket">
+              ${renderConnectors(matches, layout)}
+              ${ROUND_ORDER.map(roundKey => renderRound(roundKey, matches, layout)).join('')}
+            </div>
+          </div>
+        </div>
+        ${thirdPlace ? `
+          <section class="third-place" aria-label="Third-place match">
+            <div>
+              <h2>Third-place Match</h2>
+              <p>Displayed separately because it branches from the semifinal losers.</p>
+            </div>
+            ${renderMatchCard(thirdPlace)}
+          </section>` : ''}`;
+    }
+
+    function showError(message) {
+      const statusEl = document.getElementById('status');
+      const appEl = document.getElementById('app');
+      statusEl.className = 'status err';
+      statusEl.textContent = 'Error loading bracket';
+      appEl.innerHTML = `<div class="error-state">${escapeHtml(message)}</div>`;
+    }
+
+    async function signInWithGoogle() {
+      formMessage = '';
+      formMessageType = '';
+
+      const redirectTo = `${window.location.origin}${window.location.pathname}`;
+      const { error } = await db.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo }
+      });
+
+      if (error) {
+        formMessage = error.message;
+        formMessageType = 'error';
+        renderApp();
+      }
+    }
+
+    async function signOut() {
+      await db.auth.signOut();
+      currentUser = null;
+      currentSubmission = null;
+      localPicks = {};
+      finalGoalsValue = '';
+      formMessage = '';
+      formMessageType = '';
+      renderApp();
+    }
+
+    async function loadSubmittedBracket() {
+      currentSubmission = null;
+
+      if (!currentUser) {
+        renderApp();
+        return;
+      }
+
+      const { data: submission, error: submissionError } = await db
+        .from('submissions')
+        .select('id, user_id, final_goals_tiebreaker, is_locked, submitted_at')
+        .eq('user_id', currentUser.id)
+        .maybeSingle();
+
+      if (submissionError) {
+        formMessage = `Could not load submitted bracket: ${submissionError.message}`;
+        formMessageType = 'error';
+        renderApp();
+        return;
+      }
+
+      if (!submission) {
+        currentSubmission = null;
+        renderApp();
+        return;
+      }
+
+      const { data: picks, error: picksError } = await db
+        .from('picks')
+        .select('match_id, predicted_winner')
+        .eq('submission_id', submission.id);
+
+      if (picksError) {
+        formMessage = `Could not load picks: ${picksError.message}`;
+        formMessageType = 'error';
+        renderApp();
+        return;
+      }
+
+      currentSubmission = submission;
+      localPicks = Object.fromEntries((picks || []).map(pick => [pick.match_id, pick.predicted_winner]));
+      finalGoalsValue = String(submission.final_goals_tiebreaker ?? '');
+      formMessage = 'Submitted bracket loaded.';
+      formMessageType = 'ok';
+      localPicks = sanitizePicks(localPicks);
+      renderApp();
+    }
+
+    function buildPickPayload(matches) {
+      return getFuturePickMatches(matches).map(match => ({
+        match_id: match.id,
+        predicted_winner: match.local_winner
+      }));
+    }
+
+    async function submitBracket() {
+      if (!currentUser || isBracketReadOnly() || isSubmitting) return;
+
+      const matches = deriveMatches();
+      const readiness = getSubmissionReadiness(matches);
+
+      if (!readiness.hasValidFinalGoals) {
+        formMessage = 'Enter a final goals tiebreaker of zero or greater.';
+        formMessageType = 'error';
+        renderApp();
+        return;
+      }
+
+      if (readiness.missing.length > 0) {
+        formMessage = `Complete every remaining match before submitting. Missing ${readiness.missing.length}.`;
+        formMessageType = 'error';
+        renderApp();
+        return;
+      }
+
+      isSubmitting = true;
+      formMessage = '';
+      formMessageType = '';
+      renderApp();
+
+      const pickPayload = buildPickPayload(matches);
+      const championPick = readiness.finalMatch?.local_winner || readiness.finalMatch?.winner || '';
+
+      const { data, error } = await db.rpc('submit_bracket', {
+        p_picks: pickPayload,
+        p_final_goals: readiness.finalGoals,
+        p_champion_pick: championPick
+      });
+
+      isSubmitting = false;
+
+      if (error) {
+        formMessage = error.message;
+        formMessageType = 'error';
+        renderApp();
+        return;
+      }
+
+      currentSubmission = {
+        id: data?.submission_id,
+        user_id: currentUser.id,
+        final_goals_tiebreaker: readiness.finalGoals,
+        is_locked: true,
+        submitted_at: new Date().toISOString()
+      };
+      formMessage = 'Bracket submitted and locked.';
+      formMessageType = 'ok';
+      await loadSubmittedBracket();
+    }
+
+    async function initAuth() {
+      const { data: sessionData } = await db.auth.getSession();
+      currentUser = sessionData.session?.user || null;
+      await loadSubmittedBracket();
+
+      db.auth.onAuthStateChange(async (_event, session) => {
+        currentUser = session?.user || null;
+        if (!currentUser) {
+          currentSubmission = null;
+          localPicks = {};
+          finalGoalsValue = '';
+          formMessage = '';
+          formMessageType = '';
+          renderApp();
+          return;
+        }
+
+        await loadSubmittedBracket();
+      });
+    }
+
+    async function loadMatches() {
+      const statusEl = document.getElementById('status');
+
+      try {
+        const { data, error } = await db
+          .from('matches')
+          .select(`
+            id,
+            round,
+            match_number,
+            home_team,
+            away_team,
+            home_score,
+            away_score,
+            winner,
+            is_completed,
+            scheduled_at,
+            venue,
+            home_source_match_id,
+            away_source_match_id,
+            home_source_is_loser,
+            away_source_is_loser,
+            round_points
+          `)
+          .order('id', { ascending: true });
+
+        if (error) throw error;
+        if (!data || data.length === 0) throw new Error('No matches returned from Supabase.');
+
+        statusEl.className = 'status ok';
+        statusEl.textContent = `${data.length} matches loaded`;
+        baseMatches = data;
+        localPicks = sanitizePicks(localPicks);
+        renderApp();
+      } catch (error) {
+        showError(error.message || String(error));
+      }
+    }
+
+    document.getElementById('app').addEventListener('click', event => {
+      const teamRow = event.target.closest('[data-match-id][data-team]');
+      if (!teamRow) return;
+      selectWinner(Number(teamRow.dataset.matchId), teamRow.dataset.team);
+    });
+
+    document.getElementById('app').addEventListener('keydown', event => {
+      if (event.key !== 'Enter' && event.key !== ' ') return;
+
+      const teamRow = event.target.closest('[data-match-id][data-team]');
+      if (!teamRow) return;
+
+      event.preventDefault();
+      selectWinner(Number(teamRow.dataset.matchId), teamRow.dataset.team);
+    });
+
+    document.getElementById('account-panel').addEventListener('click', event => {
+      if (event.target.closest('#sign-in-google')) {
+        signInWithGoogle();
+        return;
+      }
+
+      if (event.target.closest('#sign-out')) {
+        signOut();
+        return;
+      }
+
+      if (event.target.closest('#submit-bracket')) {
+        submitBracket();
+      }
+    });
+
+    document.getElementById('account-panel').addEventListener('input', event => {
+      if (event.target.id !== 'final-goals') return;
+      finalGoalsValue = event.target.value;
+      formMessage = '';
+      formMessageType = '';
+    });
+
+    async function init() {
+      await loadMatches();
+      await initAuth();
+    }
+
+    init();
+  </script>
+</body>
+</html>
