@@ -17,6 +17,7 @@ Flow:
 5. The function skips unfinished, tied-without-shootout-winner, mismatched, already-recorded, and `manual_override = true` matches.
 6. New completed results call `public.record_match_result(match_id_input, winner_team_input, 'worldcup2026')`.
 7. `record_match_result` advances teams and calls `recalculate_scores()`.
+8. The Edge Function stores the provider's integer `home_score` and `away_score` on the matching `matches` row.
 
 ## Required secrets
 

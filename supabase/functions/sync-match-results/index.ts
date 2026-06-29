@@ -17,6 +17,8 @@ type SyncSummary = {
     matchId: number;
     externalMatchId: string;
     winner: string;
+    homeScore: number | null;
+    awayScore: number | null;
     message: string;
   }>;
   skipped: Array<{
@@ -61,7 +63,7 @@ Deno.serve(async (request) => {
     if (matchIds.length > 0) {
       const { data, error: matchError } = await supabase
         .from('matches')
-        .select('id, home_team, away_team, winner, is_completed, external_provider, external_match_id, manual_override')
+        .select('id, home_team, away_team, home_score, away_score, winner, is_completed, external_provider, external_match_id, manual_override')
         .in('id', matchIds);
 
       if (matchError) throw matchError;
@@ -152,6 +154,12 @@ async function syncFixture(
   }
 
   if (match.is_completed && match.winner === fixture.winnerName) {
+    const scoreUpdateError = await updateMatchScores(supabase, match.id, fixture);
+    if (scoreUpdateError) {
+      summary.errors.push(`Match ${match.id} / fixture ${fixture.externalMatchId}: ${scoreUpdateError.message}`);
+      return;
+    }
+
     skip(summary, fixture.externalMatchId, 'Internal match already has this winner.', match.id);
 
     await supabase
@@ -183,13 +191,46 @@ async function syncFixture(
     return;
   }
 
+  const scoreUpdateError = await updateMatchScores(supabase, match.id, fixture);
+  if (scoreUpdateError) {
+    summary.errors.push(`Match ${match.id} / fixture ${fixture.externalMatchId}: ${scoreUpdateError.message}`);
+    return;
+  }
+
   summary.matchesUpdated += 1;
   summary.updated.push({
     matchId: match.id,
     externalMatchId: fixture.externalMatchId,
     winner: fixture.winnerName,
+    homeScore: fixture.homeScore,
+    awayScore: fixture.awayScore,
     message: data?.message ?? 'Updated.',
   });
+}
+
+async function updateMatchScores(
+  supabase: ReturnType<typeof createClient>,
+  matchId: number,
+  fixture: CompletedFixtureResult,
+): Promise<Error | null> {
+  if (!Number.isInteger(fixture.homeScore) || !Number.isInteger(fixture.awayScore)) {
+    return new Error('Completed fixture is missing integer scores.');
+  }
+
+  const { error } = await supabase
+    .from('matches')
+    .update({
+      home_score: fixture.homeScore,
+      away_score: fixture.awayScore,
+      external_provider: fixture.provider,
+      external_match_id: fixture.externalMatchId,
+      result_source: fixture.provider,
+      last_synced_at: new Date().toISOString(),
+    })
+    .eq('id', matchId)
+    .eq('manual_override', false);
+
+  return error ? new Error(error.message) : null;
 }
 
 function skip(summary: SyncSummary, externalMatchId: string, reason: string, matchId?: number) {

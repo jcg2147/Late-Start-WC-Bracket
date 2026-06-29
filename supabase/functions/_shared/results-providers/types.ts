@@ -2,6 +2,8 @@ export type InternalMatch = {
   id: number;
   home_team: string | null;
   away_team: string | null;
+  home_score: number | null;
+  away_score: number | null;
   winner: string | null;
   is_completed: boolean;
   external_provider: string | null;
@@ -15,6 +17,8 @@ export type CompletedFixtureResult = {
   internalMatchId: number;
   homeTeamName: string;
   awayTeamName: string;
+  homeScore: number | null;
+  awayScore: number | null;
   completed: boolean;
   winnerName: string | null;
   rawStatus: string | null;

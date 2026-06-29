@@ -71,6 +71,8 @@ function normalizeGame(game: WorldCup2026Game): CompletedFixtureResult {
     internalMatchId,
     homeTeamName,
     awayTeamName,
+    homeScore,
+    awayScore,
     completed,
     winnerName,
     rawStatus: String(game.finished ?? ''),
@@ -86,7 +88,7 @@ function isFinished(value: WorldCup2026Game['finished']): boolean {
 function parseScore(value: WorldCup2026Game['home_score']): number | null {
   if (value === null || value === undefined || value === '') return null;
   const score = Number(value);
-  return Number.isFinite(score) ? score : null;
+  return Number.isInteger(score) ? score : null;
 }
 
 function detectWinner(

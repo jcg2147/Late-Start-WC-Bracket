@@ -428,7 +428,7 @@
       position: sticky;
       top: 0;
       z-index: 1;
-      height: 52px;
+      height: 76px;
       padding: 8px 4px 10px;
       background: rgba(8, 17, 31, 0.92);
     }
@@ -441,8 +441,21 @@
     }
 
     .round-meta {
+      display: grid;
+      gap: 2px;
+      margin-top: 4px;
       color: var(--faint);
-      font-size: 0.76rem;
+      font-size: 0.72rem;
+      line-height: 1.28;
+    }
+
+    .round-scoring {
+      color: var(--muted);
+    }
+
+    .round-scoring strong {
+      color: var(--text);
+      font-weight: 850;
     }
 
     .round-matches {
@@ -612,6 +625,13 @@
       text-transform: uppercase;
     }
 
+    .third-place-meta {
+      padding: 0 4px 8px;
+      color: var(--faint);
+      font-size: 0.72rem;
+      line-height: 1.28;
+    }
+
     .third-place .match-card {
       margin: 0 8px 8px;
     }
@@ -763,7 +783,7 @@
     const ROUND_MATCH_COUNTS = { R32: 16, R16: 8, QF: 4, SF: 2, F: 1, '3P': 1 };
     const ROUND_COLUMN_WIDTH = 230;
     const ROUND_COLUMN_GAP = 18;
-    const ROUND_HEADER_HEIGHT = 52;
+    const ROUND_HEADER_HEIGHT = 76;
     const BRACKET_ROW_HEIGHT = 16;
     const LEAF_ROW_STEP = 17;
     const LEAF_ROW_CENTER = 9;
@@ -1192,6 +1212,26 @@
         </div>`;
     }
 
+    function roundMatchLine(roundKey, matchCount) {
+      if (matchCount === 1) return '1 match';
+      return `${matchCount} of ${ROUND_MATCH_COUNTS[roundKey]} matches`;
+    }
+
+    function roundScoringLine(roundKey, matchCount) {
+      const points = ROUND_POINTS[roundKey] || 0;
+      const pointLabel = points === 1 ? 'point' : 'points';
+      if (matchCount === 1) return `<strong>${points} ${pointLabel}</strong>`;
+      return `<strong>${points} ${pointLabel} each</strong> &bull; ${points * matchCount} max`;
+    }
+
+    function renderRoundMeta(roundKey, matchCount) {
+      return `
+        <div class="round-meta">
+          <div>${escapeHtml(roundMatchLine(roundKey, matchCount))}</div>
+          <div class="round-scoring">${roundScoringLine(roundKey, matchCount)}</div>
+        </div>`;
+    }
+
     function renderRound(roundKey, matches, layout, thirdPlace = null) {
       const roundMatches = matches
         .filter(match => match.round === roundKey)
@@ -1205,7 +1245,7 @@
         <section class="round" aria-label="${escapeHtml(ROUND_LABELS[roundKey] || roundKey)}">
           <div class="round-header">
             <div class="round-title">${escapeHtml(ROUND_LABELS[roundKey] || roundKey)}</div>
-            <div class="round-meta">${roundMatches.length} of ${ROUND_MATCH_COUNTS[roundKey]} matches</div>
+            ${renderRoundMeta(roundKey, roundMatches.length)}
           </div>
           <div class="round-matches" style="--bracket-rows: ${layout.rows}; height: ${layout.rows * BRACKET_ROW_HEIGHT}px;">
             ${roundMatches.map(match => renderMatchCard(match, layout.items[match.id])).join('')}
@@ -1223,6 +1263,10 @@
       return `
         <section class="third-place" style="grid-row: ${start} / span ${MATCH_CARD_ROWS};" aria-label="Third-place match">
           <div class="third-place-title">Third-Place Match</div>
+          <div class="third-place-meta">
+            <div>${escapeHtml(roundMatchLine('3P', 1))}</div>
+            <div class="round-scoring">${roundScoringLine('3P', 1)}</div>
+          </div>
           ${renderMatchCard(match)}
         </section>`;
     }
