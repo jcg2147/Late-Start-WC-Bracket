@@ -788,6 +788,7 @@
     const LEAF_ROW_STEP = 17;
     const LEAF_ROW_CENTER = 9;
     const MATCH_CARD_ROWS = 15;
+    const THIRD_PLACE_SECTION_ROWS = MATCH_CARD_ROWS + 6;
     let baseMatches = [];
     let localPicks = {};
     let currentUser = null;
@@ -1111,7 +1112,7 @@
 
       if (finalMatch && matches.some(match => match.round === '3P')) {
         const finalStart = items[finalMatch.id]?.start || 1;
-        maxRow = Math.max(maxRow, finalStart + (MATCH_CARD_ROWS * 3) + 8);
+        maxRow = Math.max(maxRow, finalStart + MATCH_CARD_ROWS + THIRD_PLACE_SECTION_ROWS + 18);
       }
 
       return {
@@ -1282,7 +1283,7 @@
       const start = finalLayout ? finalLayout.start + MATCH_CARD_ROWS + 2 : 1;
 
       return `
-        <section class="third-place" style="grid-row: ${start} / span ${MATCH_CARD_ROWS};" aria-label="Third-place match">
+        <section class="third-place" style="grid-row: ${start} / span ${THIRD_PLACE_SECTION_ROWS};" aria-label="Third-place match">
           <div class="third-place-title">Third-Place Match</div>
           <div class="third-place-meta">
             <div>${escapeHtml(roundMatchLine('3P', 1))}</div>
@@ -1298,7 +1299,7 @@
       const thirdPlace = matches.find(match => match.round === '3P');
       const hasThirdPlace = Boolean(thirdPlace);
       const start = finalLayout
-        ? finalLayout.start + MATCH_CARD_ROWS + (hasThirdPlace ? MATCH_CARD_ROWS + 4 : 3)
+        ? finalLayout.start + MATCH_CARD_ROWS + (hasThirdPlace ? THIRD_PLACE_SECTION_ROWS + 4 : 3)
         : 1;
       const readiness = getSubmissionReadiness(matches);
       const pickedCount = readiness.futureMatches.length - readiness.missing.length;
