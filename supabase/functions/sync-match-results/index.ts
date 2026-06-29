@@ -4,8 +4,10 @@ import type { CompletedFixtureResult, InternalMatch } from '../_shared/results-p
 
 type SyncSummary = {
   provider: string;
+  version: string;
   matchesChecked: number;
   matchesUpdated: number;
+  scoresUpdated: number;
   matchesSkipped: number;
   unmatched: Array<{
     externalMatchId: string;
@@ -31,6 +33,8 @@ type SyncSummary = {
 const jsonHeaders = {
   'content-type': 'application/json; charset=utf-8',
 };
+
+const SYNC_FUNCTION_VERSION = 'worldcup2026-score-sync-v2';
 
 Deno.serve(async (request) => {
   if (request.method !== 'POST') {
@@ -76,8 +80,10 @@ Deno.serve(async (request) => {
 
     const summary: SyncSummary = {
       provider: provider.name,
+      version: SYNC_FUNCTION_VERSION,
       matchesChecked: fixtures.length,
       matchesUpdated: 0,
+      scoresUpdated: 0,
       matchesSkipped: 0,
       unmatched: [],
       errors: [],
@@ -154,23 +160,14 @@ async function syncFixture(
   }
 
   if (match.is_completed && match.winner === fixture.winnerName) {
-    const scoreUpdateError = await updateMatchScores(supabase, match.id, fixture);
-    if (scoreUpdateError) {
-      summary.errors.push(`Match ${match.id} / fixture ${fixture.externalMatchId}: ${scoreUpdateError.message}`);
+    const scoreUpdate = await updateMatchScores(supabase, match.id, fixture);
+    if (scoreUpdate.error) {
+      summary.errors.push(`Match ${match.id} / fixture ${fixture.externalMatchId}: ${scoreUpdate.error.message}`);
       return;
     }
 
-    skip(summary, fixture.externalMatchId, 'Internal match already has this winner.', match.id);
-
-    await supabase
-      .from('matches')
-      .update({
-        external_provider: fixture.provider,
-        external_match_id: fixture.externalMatchId,
-        last_synced_at: new Date().toISOString(),
-      })
-      .eq('id', match.id)
-      .eq('manual_override', false);
+    summary.scoresUpdated += 1;
+    skip(summary, fixture.externalMatchId, `Internal match already has this winner; score synced as ${scoreUpdate.homeScore}-${scoreUpdate.awayScore}.`, match.id);
 
     return;
   }
@@ -191,12 +188,13 @@ async function syncFixture(
     return;
   }
 
-  const scoreUpdateError = await updateMatchScores(supabase, match.id, fixture);
-  if (scoreUpdateError) {
-    summary.errors.push(`Match ${match.id} / fixture ${fixture.externalMatchId}: ${scoreUpdateError.message}`);
+  const scoreUpdate = await updateMatchScores(supabase, match.id, fixture);
+  if (scoreUpdate.error) {
+    summary.errors.push(`Match ${match.id} / fixture ${fixture.externalMatchId}: ${scoreUpdate.error.message}`);
     return;
   }
 
+  summary.scoresUpdated += 1;
   summary.matchesUpdated += 1;
   summary.updated.push({
     matchId: match.id,
@@ -212,12 +210,16 @@ async function updateMatchScores(
   supabase: ReturnType<typeof createClient>,
   matchId: number,
   fixture: CompletedFixtureResult,
-): Promise<Error | null> {
+): Promise<{ homeScore: number; awayScore: number; error: null } | { homeScore: null; awayScore: null; error: Error }> {
   if (!Number.isInteger(fixture.homeScore) || !Number.isInteger(fixture.awayScore)) {
-    return new Error('Completed fixture is missing integer scores.');
+    return {
+      homeScore: null,
+      awayScore: null,
+      error: new Error('Completed fixture is missing integer scores.'),
+    };
   }
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('matches')
     .update({
       home_score: fixture.homeScore,
@@ -228,9 +230,31 @@ async function updateMatchScores(
       last_synced_at: new Date().toISOString(),
     })
     .eq('id', matchId)
-    .eq('manual_override', false);
+    .eq('manual_override', false)
+    .select('id, home_score, away_score')
+    .maybeSingle();
 
-  return error ? new Error(error.message) : null;
+  if (error) {
+    return {
+      homeScore: null,
+      awayScore: null,
+      error: new Error(error.message),
+    };
+  }
+
+  if (!data) {
+    return {
+      homeScore: null,
+      awayScore: null,
+      error: new Error('Score update did not match a writable row. Check manual_override and match id.'),
+    };
+  }
+
+  return {
+    homeScore: data.home_score,
+    awayScore: data.away_score,
+    error: null,
+  };
 }
 
 function skip(summary: SyncSummary, externalMatchId: string, reason: string, matchId?: number) {
