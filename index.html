@@ -465,6 +465,11 @@
       background: rgba(16, 35, 45, 0.95);
     }
 
+    .match-card.in-progress {
+      border-color: rgba(250, 204, 21, 0.38);
+      background: rgba(45, 38, 16, 0.86);
+    }
+
     .readonly .match-card.future {
       opacity: 1;
       border-color: rgba(72, 213, 151, 0.26);
@@ -501,6 +506,10 @@
     .match-status.completed,
     .match-status.locked {
       color: var(--green);
+    }
+
+    .match-status.in-progress {
+      color: #facc15;
     }
 
     .teams {
@@ -581,6 +590,12 @@
       font-weight: 800;
     }
 
+    .lock-note {
+      color: var(--faint);
+      font-size: 0.78rem;
+      line-height: 1.35;
+    }
+
     .third-place {
       margin-top: 14px;
       padding-top: 12px;
@@ -633,6 +648,12 @@
       gap: 3px;
       color: var(--muted);
       font-size: 0.82rem;
+    }
+
+    .late-entry-note {
+      color: #fef3c7;
+      font-size: 0.82rem;
+      line-height: 1.4;
     }
 
     .empty-state,
@@ -747,6 +768,7 @@
     const LEAF_ROW_STEP = 17;
     const LEAF_ROW_CENTER = 9;
     const MATCH_CARD_ROWS = 15;
+    const PRE_CHALLENGE_MATCH_IDS = [73];
     let baseMatches = [];
     let localPicks = {};
     let currentUser = null;
@@ -806,6 +828,29 @@
       return Boolean(currentProfile?.username);
     }
 
+    function hasStarted(match) {
+      if (!match.scheduled_at) return false;
+      const kickoff = new Date(match.scheduled_at).getTime();
+      return Number.isFinite(kickoff) && Date.now() >= kickoff;
+    }
+
+    function matchState(match) {
+      const status = String(match.status || '').toLowerCase();
+      if (match.is_completed || status === 'completed') return 'completed';
+      if (status === 'in_progress') return 'in-progress';
+      if (PRE_CHALLENGE_MATCH_IDS.includes(match.id)) return 'locked';
+      if (match.is_locked || hasStarted(match)) return 'locked';
+      return 'future';
+    }
+
+    function isMatchPickable(match) {
+      return matchState(match) === 'future' && Boolean(match.home_team && match.away_team);
+    }
+
+    function getLockedEntryMatches(matches) {
+      return matches.filter(match => matchState(match) !== 'future');
+    }
+
     function validateUsername(value) {
       const username = value.trim();
       if (!username) return 'Username is required.';
@@ -818,7 +863,7 @@
 
     function getEditableTeam(match, side) {
       if (isBracketReadOnly()) return null;
-      if (matchState(match) !== 'future') return null;
+      if (!isMatchPickable(match)) return null;
       const team = match[`${side}_team`];
       return team && match.home_team && match.away_team ? team : null;
     }
@@ -860,7 +905,7 @@
 
         const pickedWinner = picks[match.id];
         if (
-          matchState(match) === 'future' &&
+          (isBracketReadOnly() || isMatchPickable(match)) &&
           pickedWinner &&
           (match.home_team === pickedWinner || match.away_team === pickedWinner)
         ) {
@@ -886,7 +931,7 @@
           if (!pickedWinner) return;
 
           const isValid =
-            matchState(match) === 'future' &&
+            (isBracketReadOnly() || isMatchPickable(match)) &&
             match.home_team &&
             match.away_team &&
             (match.home_team === pickedWinner || match.away_team === pickedWinner);
@@ -1046,12 +1091,6 @@
       return 'TBD';
     }
 
-    function matchState(match) {
-      if (PRE_CHALLENGE_MATCH_IDS.includes(match.id)) return 'locked';
-      if (match.is_completed) return 'completed';
-      return 'future';
-    }
-
     function renderTeam(match, side) {
       const teamName = sourceLabel(match, side);
       const score = match[`${side}_score`];
@@ -1077,9 +1116,23 @@
         </div>`;
     }
 
+    function matchStatusLabel(state) {
+      if (state === 'completed') return 'Complete';
+      if (state === 'in-progress') return 'In Progress';
+      if (state === 'locked') return 'Locked';
+      return 'Open';
+    }
+
+    function matchLockNote(match, state) {
+      if (state === 'in-progress') return 'In progress - picks are closed.';
+      if (state === 'locked') return 'Locked - this match has already started.';
+      if (state === 'completed' && !match.winner) return 'Complete - official winner pending.';
+      return '';
+    }
+
     function renderMatchCard(match, layoutItem = null) {
       const state = matchState(match);
-      const statusLabel = state === 'locked' ? 'Locked' : match.is_completed ? 'Complete' : 'Future';
+      const statusLabel = matchStatusLabel(state);
       const winnerLine = match.winner
         ? `<div class="official-winner">Official winner: ${escapeHtml(match.winner)}</div>`
         : '';
@@ -1087,6 +1140,7 @@
         ? `<div class="local-pick">Your pick: ${escapeHtml(match.local_winner)}</div>`
         : '';
       const finalGoalsLine = renderFinalGoalsField(match);
+      const lockNote = matchLockNote(match, state);
       const styleAttr = layoutItem
         ? ` style="grid-row: ${layoutItem.start} / span ${MATCH_CARD_ROWS};"`
         : '';
@@ -1105,6 +1159,7 @@
             ${winnerLine}
             ${pickLine}
             ${finalGoalsLine}
+            ${lockNote ? `<div class="lock-note">${escapeHtml(lockNote)}</div>` : ''}
             <div>${formatDate(match.scheduled_at)}</div>
             <div>${escapeHtml(match.venue || 'Venue TBD')} &middot; ${match.round_points} pts</div>
           </div>
@@ -1184,6 +1239,7 @@
       const readiness = getSubmissionReadiness(matches);
       const pickedCount = readiness.futureMatches.length - readiness.missing.length;
       const needsFinalGoals = readiness.finalMatch?.local_winner && !readiness.hasValidFinalGoals;
+      const lockedEntryCount = getLockedEntryMatches(matches).length;
       const messageClass = formMessageType ? ` ${formMessageType}` : '';
 
       if (isBracketReadOnly()) {
@@ -1202,14 +1258,21 @@
         missingLines.push(`${pickedCount} of ${readiness.futureMatches.length} predictions complete.`);
       }
       if (needsFinalGoals) missingLines.push('Enter your Final goals tiebreaker.');
-      if (!readiness.finalMatch?.local_winner) missingLines.push('Pick a winner for the Final.');
+      if (readiness.finalMatch && isMatchPickable(readiness.finalMatch) && !readiness.finalMatch.local_winner) {
+        missingLines.push('Pick a winner for the Final.');
+      }
+      if (readiness.futureMatches.length === 0) missingLines.push('No future matches are currently open for picks.');
 
       const readyToSubmit = currentUser && hasUsername() && readiness.missing.length === 0 && readiness.hasValidFinalGoals;
+      const lateEntryNote = lockedEntryCount > 0
+        ? '<div class="late-entry-note">Some matches have already started or finished. Those matches are locked and worth 0 points for new entries.</div>'
+        : '';
 
       return `
         <section class="bracket-submit-panel" style="grid-row: ${start} / span 10;" aria-label="Submit bracket">
           <div class="bracket-submit-title">Finished making your predictions?</div>
           <div class="bracket-submit-copy">Submit your bracket to lock it in.</div>
+          ${lateEntryNote}
           ${readyToSubmit ? `
             <button class="button primary large" id="submit-bracket" type="button" ${isSubmitting ? 'disabled' : ''}>
               ${isSubmitting ? 'Submitting...' : 'Submit Bracket'}
@@ -1266,7 +1329,7 @@
     }
 
     function getFuturePickMatches(matches) {
-      return matches.filter(match => matchState(match) === 'future');
+      return matches.filter(match => isMatchPickable(match));
     }
 
     function getSubmissionReadiness(matches) {
@@ -1274,16 +1337,21 @@
       const missing = futureMatches.filter(match => !match.local_winner);
       const finalMatch = matches.find(match => match.round === 'F');
       const finalGoals = Number(finalGoalsValue);
+      const requiresFinalGoals = Boolean(finalMatch?.local_winner);
       const hasValidFinalGoals =
-        finalGoalsValue !== '' &&
-        Number.isInteger(finalGoals) &&
-        finalGoals >= 0;
+        !requiresFinalGoals ||
+        (
+          finalGoalsValue !== '' &&
+          Number.isInteger(finalGoals) &&
+          finalGoals >= 0
+        );
 
       return {
         futureMatches,
         missing,
         finalMatch,
         finalGoals,
+        requiresFinalGoals,
         hasValidFinalGoals,
         isComplete: missing.length === 0 && hasValidFinalGoals
       };
@@ -1619,7 +1687,7 @@
       const matches = deriveMatches();
       const readiness = getSubmissionReadiness(matches);
 
-      if (!readiness.hasValidFinalGoals) {
+      if (readiness.requiresFinalGoals && !readiness.hasValidFinalGoals) {
         formMessage = 'Enter a final goals tiebreaker of zero or greater.';
         formMessageType = 'error';
         renderApp();
@@ -1713,6 +1781,9 @@
             away_score,
             winner,
             is_completed,
+            status,
+            is_locked,
+            result_source,
             scheduled_at,
             venue,
             home_source_match_id,
