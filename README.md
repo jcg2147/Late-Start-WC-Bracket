@@ -23,10 +23,10 @@ cd C:\Users\juanc\Downloads\late-start-bracket
 python -m http.server 8000 --bind 127.0.0.1
 ```
 
-Open:
+Open the local server address shown below in your browser:
 
 ```text
-http://127.0.0.1:8000/
+127.0.0.1:8000
 ```
 
 The frontend configuration lives in:
