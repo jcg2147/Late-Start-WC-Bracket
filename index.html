@@ -261,6 +261,80 @@
       color: var(--green);
     }
 
+    .leaderboard-panel {
+      margin-bottom: 20px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(16, 27, 47, 0.72);
+      overflow: hidden;
+    }
+
+    .leaderboard-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .leaderboard-title {
+      font-size: 1rem;
+      font-weight: 850;
+    }
+
+    .leaderboard-subtitle {
+      color: var(--muted);
+      font-size: 0.82rem;
+    }
+
+    .leaderboard-table-wrap {
+      overflow-x: auto;
+    }
+
+    .leaderboard-table {
+      width: 100%;
+      min-width: 760px;
+      border-collapse: collapse;
+      font-size: 0.86rem;
+    }
+
+    .leaderboard-table th,
+    .leaderboard-table td {
+      padding: 10px 12px;
+      border-bottom: 1px solid rgba(38, 54, 83, 0.72);
+      text-align: left;
+      vertical-align: middle;
+      white-space: nowrap;
+    }
+
+    .leaderboard-table th {
+      color: var(--faint);
+      font-size: 0.72rem;
+      font-weight: 850;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      background: rgba(8, 17, 31, 0.45);
+    }
+
+    .leaderboard-table td:nth-child(2) {
+      white-space: normal;
+      min-width: 180px;
+      overflow-wrap: anywhere;
+    }
+
+    .leaderboard-rank,
+    .leaderboard-points {
+      color: var(--text);
+      font-weight: 850;
+    }
+
+    .leaderboard-empty {
+      padding: 16px 14px;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
     .bracket-shell {
       border: 1px solid var(--line);
       border-radius: 8px;
@@ -515,6 +589,11 @@
         grid-template-columns: 1fr;
       }
 
+      .leaderboard-header {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
       .submit-controls {
         justify-content: flex-start;
       }
@@ -558,6 +637,7 @@
 
     <section id="summary" class="summary" aria-label="Bracket summary"></section>
     <section id="account-panel" class="action-panel" aria-live="polite"></section>
+    <section id="leaderboard" class="leaderboard-panel" aria-live="polite"></section>
     <section id="app" aria-live="polite">
       <div class="empty-state">Loading bracket data from Supabase.</div>
     </section>
@@ -585,6 +665,9 @@
     let isSubmitting = false;
     let formMessage = '';
     let formMessageType = '';
+    let leaderboardRows = [];
+    let leaderboardError = '';
+    let isLeaderboardLoading = false;
 
     if (SUPABASE_URL.includes('YOUR_PROJECT_ID') || SUPABASE_ANON_KEY.includes('YOUR_ANON')) {
       showError('Fill in SUPABASE_URL and SUPABASE_ANON_KEY in js/config.js first.');
@@ -1105,10 +1188,80 @@
         </div>`;
     }
 
+    function renderLeaderboard() {
+      const leaderboardEl = document.getElementById('leaderboard');
+      const rows = leaderboardRows.map(row => `
+        <tr>
+          <td class="leaderboard-rank">${escapeHtml(row.rank)}</td>
+          <td>${escapeHtml(row.username || 'Unknown')}</td>
+          <td class="leaderboard-points">${escapeHtml(row.total_points ?? 0)}</td>
+          <td>${escapeHtml(row.correct_picks ?? 0)}</td>
+          <td>${escapeHtml(row.champion_pick || 'TBD')}</td>
+          <td>${escapeHtml(row.final_goals_tiebreaker ?? '-')}</td>
+        </tr>`).join('');
+
+      leaderboardEl.innerHTML = `
+        <div class="leaderboard-header">
+          <div>
+            <div class="leaderboard-title">Current Standings</div>
+            <div class="leaderboard-subtitle">
+              ${leaderboardError
+                ? escapeHtml(leaderboardError)
+                : isLeaderboardLoading
+                  ? 'Loading standings...'
+                  : `${leaderboardRows.length} submitted bracket${leaderboardRows.length === 1 ? '' : 's'}`}
+            </div>
+          </div>
+          <button class="button" id="refresh-standings" type="button" ${isLeaderboardLoading ? 'disabled' : ''}>
+            Refresh
+          </button>
+        </div>
+        ${leaderboardRows.length ? `
+          <div class="leaderboard-table-wrap">
+            <table class="leaderboard-table">
+              <thead>
+                <tr>
+                  <th>Rank</th>
+                  <th>User</th>
+                  <th>Total</th>
+                  <th>Correct</th>
+                  <th>Champion</th>
+                  <th>Final goals</th>
+                </tr>
+              </thead>
+              <tbody>${rows}</tbody>
+            </table>
+          </div>` : `
+          <div class="leaderboard-empty">
+            ${leaderboardError ? 'Standings unavailable.' : 'No submitted brackets yet.'}
+          </div>`}`;
+    }
+
+    async function loadLeaderboard() {
+      isLeaderboardLoading = true;
+      leaderboardError = '';
+      renderLeaderboard();
+
+      const { data, error } = await db.rpc('get_current_standings');
+
+      isLeaderboardLoading = false;
+
+      if (error) {
+        leaderboardRows = [];
+        leaderboardError = `Could not load standings: ${error.message}`;
+        renderLeaderboard();
+        return;
+      }
+
+      leaderboardRows = data || [];
+      renderLeaderboard();
+    }
+
     function renderApp() {
       const matches = deriveMatches();
       renderSummary(matches);
       renderAccountPanel(matches);
+      renderLeaderboard();
       renderBracket(matches);
     }
 
@@ -1271,6 +1424,7 @@
       formMessage = 'Bracket submitted and locked.';
       formMessageType = 'ok';
       await loadSubmittedBracket();
+      await loadLeaderboard();
     }
 
     async function initAuth() {
@@ -1372,9 +1526,15 @@
       }
     });
 
+    document.getElementById('leaderboard').addEventListener('click', event => {
+      if (!event.target.closest('#refresh-standings')) return;
+      loadLeaderboard();
+    });
+
     async function init() {
       await loadMatches();
       await initAuth();
+      await loadLeaderboard();
     }
 
     init();
