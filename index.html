@@ -986,12 +986,24 @@
       return downstream;
     }
 
+    function getBracketScrollLeft() {
+      return document.querySelector('.bracket-scroll')?.scrollLeft ?? 0;
+    }
+
+    function restoreBracketScrollLeft(scrollLeft) {
+      requestAnimationFrame(() => {
+        const bracketScroll = document.querySelector('.bracket-scroll');
+        if (bracketScroll) bracketScroll.scrollLeft = scrollLeft;
+      });
+    }
+
     function selectWinner(matchId, team) {
       if (isBracketReadOnly()) return;
 
       const currentPick = localPicks[matchId];
       if (currentPick === team) return;
 
+      const bracketScrollLeft = getBracketScrollLeft();
       const nextPicks = { ...localPicks, [matchId]: team };
       getDownstreamMatchIds(matchId).forEach(id => {
         delete nextPicks[id];
@@ -999,6 +1011,7 @@
 
       localPicks = sanitizePicks(nextPicks);
       renderApp();
+      restoreBracketScrollLeft(bracketScrollLeft);
     }
 
     function getWinnerSourceIds(match) {
