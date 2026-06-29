@@ -1,0 +1,125 @@
+import type { CompletedFixtureResult, ResultsProvider } from './types.ts';
+
+type WorldCup2026Game = {
+  id?: string | number;
+  home_team_name_en?: string;
+  away_team_name_en?: string;
+  home_score?: string | number | null;
+  away_score?: string | number | null;
+  finished?: string | boolean | null;
+  type?: string;
+  winner?: string | null;
+  winner_team_name_en?: string | null;
+  penalty_winner?: string | null;
+  shootout_winner?: string | null;
+};
+
+type WorldCup2026Response = {
+  games?: WorldCup2026Game[];
+};
+
+const PROVIDER_NAME = 'worldcup2026';
+
+export function createWorldCup2026Provider(): ResultsProvider {
+  const baseUrl = Deno.env.get('WORLDCUP2026_API_BASE_URL') ?? 'https://worldcup26.ir';
+
+  return {
+    name: PROVIDER_NAME,
+    async fetchFixtures(): Promise<CompletedFixtureResult[]> {
+      const url = new URL('/get/games', baseUrl);
+      const response = await fetch(url);
+
+      if (!response.ok) {
+        const body = await response.text();
+        throw new Error(`WorldCup2026 API request failed: ${response.status} ${body}`);
+      }
+
+      const payload = await response.json() as WorldCup2026Game[] | WorldCup2026Response;
+      const games = Array.isArray(payload) ? payload : payload.games;
+
+      if (!Array.isArray(games)) {
+        throw new Error('WorldCup2026 API response did not include a games array');
+      }
+
+      return games.map(normalizeGame);
+    },
+  };
+}
+
+function normalizeGame(game: WorldCup2026Game): CompletedFixtureResult {
+  const externalMatchId = String(game.id ?? '').trim();
+  const internalMatchId = Number.parseInt(externalMatchId, 10);
+  const homeTeamName = String(game.home_team_name_en ?? '').trim();
+  const awayTeamName = String(game.away_team_name_en ?? '').trim();
+  const completed = isFinished(game.finished);
+  const homeScore = parseScore(game.home_score);
+  const awayScore = parseScore(game.away_score);
+  const shootoutWinner = firstNonEmpty(
+    game.shootout_winner,
+    game.penalty_winner,
+    game.winner_team_name_en,
+    game.winner,
+  );
+  const winnerName = detectWinner(homeTeamName, awayTeamName, homeScore, awayScore, shootoutWinner);
+  const skipReason = completed && !winnerName
+    ? 'Completed match has tied score and no shootout winner field.'
+    : undefined;
+
+  return {
+    provider: PROVIDER_NAME,
+    externalMatchId,
+    internalMatchId,
+    homeTeamName,
+    awayTeamName,
+    completed,
+    winnerName,
+    rawStatus: String(game.finished ?? ''),
+    skipReason,
+  };
+}
+
+function isFinished(value: WorldCup2026Game['finished']): boolean {
+  if (typeof value === 'boolean') return value;
+  return String(value ?? '').trim().toLowerCase() === 'true';
+}
+
+function parseScore(value: WorldCup2026Game['home_score']): number | null {
+  if (value === null || value === undefined || value === '') return null;
+  const score = Number(value);
+  return Number.isFinite(score) ? score : null;
+}
+
+function detectWinner(
+  homeTeamName: string,
+  awayTeamName: string,
+  homeScore: number | null,
+  awayScore: number | null,
+  shootoutWinner: string | null,
+): string | null {
+  if (homeScore === null || awayScore === null) return null;
+  if (homeScore > awayScore) return homeTeamName;
+  if (awayScore > homeScore) return awayTeamName;
+  return normalizeWinnerName(shootoutWinner, homeTeamName, awayTeamName);
+}
+
+function normalizeWinnerName(winner: string | null, homeTeamName: string, awayTeamName: string): string | null {
+  if (!winner) return null;
+
+  const normalizedWinner = normalizeName(winner);
+  if (normalizedWinner === normalizeName(homeTeamName)) return homeTeamName;
+  if (normalizedWinner === normalizeName(awayTeamName)) return awayTeamName;
+  return null;
+}
+
+function normalizeName(value: string): string {
+  return value.trim().toLowerCase();
+}
+
+function firstNonEmpty(...values: Array<string | null | undefined>): string | null {
+  for (const value of values) {
+    const trimmed = String(value ?? '').trim();
+    if (trimmed) return trimmed;
+  }
+
+  return null;
+}

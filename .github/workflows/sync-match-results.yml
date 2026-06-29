@@ -1,0 +1,19 @@
+name: Sync match results
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Every 30 minutes. Adjust during tournament days if needed.
+    - cron: "*/30 * * * *"
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call Supabase Edge Function
+        run: |
+          curl --fail-with-body -X POST "$SYNC_MATCH_RESULTS_URL" \
+            -H "Authorization: Bearer $SYNC_MATCH_RESULTS_SECRET"
+        env:
+          SYNC_MATCH_RESULTS_URL: ${{ secrets.SYNC_MATCH_RESULTS_URL }}
+          SYNC_MATCH_RESULTS_SECRET: ${{ secrets.SYNC_MATCH_RESULTS_SECRET }}
