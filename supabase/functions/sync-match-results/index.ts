@@ -34,7 +34,7 @@ const jsonHeaders = {
   'content-type': 'application/json; charset=utf-8',
 };
 
-const SYNC_FUNCTION_VERSION = 'worldcup2026-score-sync-v2';
+const SYNC_FUNCTION_VERSION = 'worldcup2026-score-sync-v3';
 
 Deno.serve(async (request) => {
   if (request.method !== 'POST') {

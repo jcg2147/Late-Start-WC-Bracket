@@ -12,6 +12,8 @@ type WorldCup2026Game = {
   winner_team_name_en?: string | null;
   penalty_winner?: string | null;
   shootout_winner?: string | null;
+  home_penalty_score?: string | number | null;
+  away_penalty_score?: string | number | null;
 };
 
 type WorldCup2026Response = {
@@ -54,15 +56,17 @@ function normalizeGame(game: WorldCup2026Game): CompletedFixtureResult {
   const completed = isFinished(game.finished);
   const homeScore = parseScore(game.home_score);
   const awayScore = parseScore(game.away_score);
+  const homePenaltyScore = parseScore(game.home_penalty_score);
+  const awayPenaltyScore = parseScore(game.away_penalty_score);
   const shootoutWinner = firstNonEmpty(
     game.shootout_winner,
     game.penalty_winner,
     game.winner_team_name_en,
     game.winner,
-  );
+  ) ?? detectPenaltyWinner(homeTeamName, awayTeamName, homePenaltyScore, awayPenaltyScore);
   const winnerName = detectWinner(homeTeamName, awayTeamName, homeScore, awayScore, shootoutWinner);
   const skipReason = completed && !winnerName
-    ? 'Completed match has tied score and no shootout winner field.'
+    ? 'Completed match has tied score and no shootout winner or decisive penalty score.'
     : undefined;
 
   return {
@@ -102,6 +106,18 @@ function detectWinner(
   if (homeScore > awayScore) return homeTeamName;
   if (awayScore > homeScore) return awayTeamName;
   return normalizeWinnerName(shootoutWinner, homeTeamName, awayTeamName);
+}
+
+function detectPenaltyWinner(
+  homeTeamName: string,
+  awayTeamName: string,
+  homePenaltyScore: number | null,
+  awayPenaltyScore: number | null,
+): string | null {
+  if (homePenaltyScore === null || awayPenaltyScore === null) return null;
+  if (homePenaltyScore > awayPenaltyScore) return homeTeamName;
+  if (awayPenaltyScore > homePenaltyScore) return awayTeamName;
+  return null;
 }
 
 function normalizeWinnerName(winner: string | null, homeTeamName: string, awayTeamName: string): string | null {
