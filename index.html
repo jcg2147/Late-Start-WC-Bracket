@@ -564,6 +564,20 @@
       font-weight: 850;
     }
 
+    .team-row.correct {
+      outline: 1px solid rgba(72, 213, 151, 0.7);
+      background: rgba(72, 213, 151, 0.15);
+      color: #d9ffed;
+      font-weight: 850;
+    }
+
+    .team-row.incorrect {
+      outline: 1px solid rgba(255, 107, 107, 0.72);
+      background: rgba(255, 107, 107, 0.14);
+      color: #ffe0e0;
+      font-weight: 850;
+    }
+
     .team-name {
       overflow-wrap: anywhere;
     }
@@ -584,6 +598,14 @@
       color: var(--gold);
     }
 
+    .correct .score {
+      color: var(--green);
+    }
+
+    .incorrect .score {
+      color: var(--red);
+    }
+
     .match-footer {
       display: grid;
       gap: 3px;
@@ -601,6 +623,33 @@
     .local-pick {
       color: var(--accent);
       font-weight: 800;
+    }
+
+    .pick-result {
+      display: inline-flex;
+      width: fit-content;
+      align-items: center;
+      min-height: 20px;
+      padding: 2px 7px;
+      border-radius: 999px;
+      font-size: 0.68rem;
+      font-weight: 850;
+      line-height: 1.2;
+    }
+
+    .pick-result.correct {
+      background: rgba(72, 213, 151, 0.16);
+      color: var(--green);
+    }
+
+    .pick-result.incorrect {
+      background: rgba(255, 107, 107, 0.15);
+      color: var(--red);
+    }
+
+    .pick-result.none {
+      background: rgba(148, 163, 184, 0.14);
+      color: var(--muted);
     }
 
     .lock-note {
@@ -908,6 +957,12 @@
       return null;
     }
 
+    function pickResult(match) {
+      if (matchState(match) !== 'completed' || !match.winner) return null;
+      if (!match.local_winner) return 'none';
+      return match.local_winner === match.winner ? 'correct' : 'incorrect';
+    }
+
     function deriveMatches(picks = localPicks) {
       const byId = new Map();
       const derived = baseMatches
@@ -1137,13 +1192,14 @@
       const score = match[`${side}_score`];
       const isKnownTeam = Boolean(match[`${side}_team`]);
       const editableTeam = getEditableTeam(match, side);
-      const isOfficialWinner = isKnownTeam && match.winner === match[`${side}_team`];
       const isSelectedWinner = isKnownTeam && match.local_winner === match[`${side}_team`];
+      const result = pickResult(match);
       const classes = [
         'team-row',
         editableTeam ? 'selectable' : '',
-        isOfficialWinner ? 'winner' : '',
-        isSelectedWinner ? 'selected' : ''
+        isSelectedWinner && result === 'correct' ? 'correct' : '',
+        isSelectedWinner && result === 'incorrect' ? 'incorrect' : '',
+        isSelectedWinner && !result ? 'selected' : ''
       ].filter(Boolean).join(' ');
       const nameClasses = ['team-name', isKnownTeam ? '' : 'tbd'].filter(Boolean).join(' ');
       const clickAttrs = editableTeam
@@ -1177,9 +1233,17 @@
       const winnerLine = match.winner
         ? `<div class="official-winner">Official winner: ${escapeHtml(match.winner)}</div>`
         : '';
-      const pickLine = match.local_winner
+      const result = pickResult(match);
+      const pickLine = state === 'completed' && match.local_winner
         ? `<div class="local-pick">Your pick: ${escapeHtml(match.local_winner)}</div>`
         : '';
+      const resultLine = result === 'correct'
+        ? '<div class="pick-result correct">Correct pick</div>'
+        : result === 'incorrect'
+          ? '<div class="pick-result incorrect">Wrong pick</div>'
+          : result === 'none'
+            ? '<div class="pick-result none">No pick submitted</div>'
+            : '';
       const finalGoalsLine = renderFinalGoalsField(match);
       const lockNote = matchLockNote(match, state);
       const styleAttr = layoutItem
@@ -1199,6 +1263,7 @@
           <div class="match-footer">
             ${winnerLine}
             ${pickLine}
+            ${resultLine}
             ${finalGoalsLine}
             ${lockNote ? `<div class="lock-note">${escapeHtml(lockNote)}</div>` : ''}
             <div>${formatDate(match.scheduled_at)}</div>
