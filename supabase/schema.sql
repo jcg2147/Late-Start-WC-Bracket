@@ -15,6 +15,8 @@ CREATE TABLE IF NOT EXISTS matches (
   away_team             TEXT,
   home_score            INTEGER,
   away_score            INTEGER,
+  home_penalty_score    INTEGER,
+  away_penalty_score    INTEGER,
   winner                TEXT,
   is_completed          BOOLEAN NOT NULL DEFAULT FALSE,
   scheduled_at          TIMESTAMPTZ,

@@ -19,6 +19,8 @@ export type CompletedFixtureResult = {
   awayTeamName: string;
   homeScore: number | null;
   awayScore: number | null;
+  homePenaltyScore: number | null;
+  awayPenaltyScore: number | null;
   completed: boolean;
   winnerName: string | null;
   rawStatus: string | null;

@@ -21,6 +21,8 @@ type SyncSummary = {
     winner: string;
     homeScore: number | null;
     awayScore: number | null;
+    homePenaltyScore: number | null;
+    awayPenaltyScore: number | null;
     message: string;
   }>;
   skipped: Array<{
@@ -34,7 +36,7 @@ const jsonHeaders = {
   'content-type': 'application/json; charset=utf-8',
 };
 
-const SYNC_FUNCTION_VERSION = 'worldcup2026-score-sync-v3';
+const SYNC_FUNCTION_VERSION = 'worldcup2026-score-sync-v4';
 
 Deno.serve(async (request) => {
   if (request.method !== 'POST') {
@@ -202,6 +204,8 @@ async function syncFixture(
     winner: fixture.winnerName,
     homeScore: fixture.homeScore,
     awayScore: fixture.awayScore,
+    homePenaltyScore: fixture.homePenaltyScore,
+    awayPenaltyScore: fixture.awayPenaltyScore,
     message: data?.message ?? 'Updated.',
   });
 }
@@ -224,6 +228,8 @@ async function updateMatchScores(
     .update({
       home_score: fixture.homeScore,
       away_score: fixture.awayScore,
+      home_penalty_score: fixture.homePenaltyScore,
+      away_penalty_score: fixture.awayPenaltyScore,
       external_provider: fixture.provider,
       external_match_id: fixture.externalMatchId,
       result_source: fixture.provider,

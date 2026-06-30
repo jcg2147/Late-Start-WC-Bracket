@@ -588,7 +588,7 @@
     }
 
     .score {
-      min-width: 1.4rem;
+      min-width: 2.4rem;
       color: var(--muted);
       text-align: right;
       font-weight: 800;
@@ -1189,7 +1189,6 @@
 
     function renderTeam(match, side) {
       const teamName = sourceLabel(match, side);
-      const score = match[`${side}_score`];
       const isKnownTeam = Boolean(match[`${side}_team`]);
       const editableTeam = getEditableTeam(match, side);
       const isSelectedWinner = isKnownTeam && match.local_winner === match[`${side}_team`];
@@ -1209,7 +1208,7 @@
       return `
         <div class="${classes}"${clickAttrs}>
           <span class="${nameClasses}" title="${escapeHtml(teamName)}">${escapeHtml(teamName)}</span>
-          <span class="score">${Number.isInteger(score) ? score : ''}</span>
+          <span class="score">${escapeHtml(renderScore(match, side))}</span>
         </div>`;
     }
 
@@ -1225,6 +1224,14 @@
       if (state === 'locked') return 'Locked - this match has already started.';
       if (state === 'completed' && !match.winner) return 'Complete - official winner pending.';
       return '';
+    }
+
+    function renderScore(match, side) {
+      const score = match[`${side}_score`];
+      if (!Number.isInteger(score)) return '';
+
+      const penaltyScore = match[`${side}_penalty_score`];
+      return Number.isInteger(penaltyScore) ? `${score}(${penaltyScore})` : String(score);
     }
 
     function renderMatchCard(match, layoutItem = null) {
@@ -2030,6 +2037,8 @@
             away_team,
             home_score,
             away_score,
+            home_penalty_score,
+            away_penalty_score,
             winner,
             is_completed,
             status,

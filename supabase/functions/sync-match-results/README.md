@@ -14,10 +14,10 @@ Flow:
 2. Completed games are normalized by `worldcup2026.ts`.
 3. API `id` is converted to an integer and matched directly to `matches.id`.
 4. Home and away team names are validated before any update.
-5. The function skips unfinished, tied-without-shootout-winner, mismatched, already-recorded, and `manual_override = true` matches.
+5. The function skips unfinished, tied-without-shootout-winner-or-penalty-score, mismatched, already-recorded, and `manual_override = true` matches.
 6. New completed results call `public.record_match_result(match_id_input, winner_team_input, 'worldcup2026')`.
 7. `record_match_result` advances teams and calls `recalculate_scores()`.
-8. The Edge Function stores the provider's integer `home_score` and `away_score` on the matching `matches` row.
+8. The Edge Function stores the provider's integer `home_score`, `away_score`, `home_penalty_score`, and `away_penalty_score` on the matching `matches` row.
 
 ## Required secrets
 
@@ -54,7 +54,7 @@ Expected response:
 ```json
 {
   "provider": "worldcup2026",
-  "version": "worldcup2026-score-sync-v3",
+  "version": "worldcup2026-score-sync-v4",
   "matchesChecked": 1,
   "matchesUpdated": 1,
   "scoresUpdated": 1,

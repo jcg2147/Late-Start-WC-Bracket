@@ -77,6 +77,8 @@ function normalizeGame(game: WorldCup2026Game): CompletedFixtureResult {
     awayTeamName,
     homeScore,
     awayScore,
+    homePenaltyScore,
+    awayPenaltyScore,
     completed,
     winnerName,
     rawStatus: String(game.finished ?? ''),
