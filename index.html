@@ -1201,10 +1201,13 @@
       const teamName = sourceLabel(match, side);
       const isKnownTeam = Boolean(match[`${side}_team`]);
       const editableTeam = getEditableTeam(match, side);
+      const state = matchState(match);
+      const visibleTeam = match[`${side}_team`];
+      const userPick = match.submitted_pick || match.local_winner;
       const isSelectedWinner =
         isKnownTeam &&
-        match.local_winner === match[`${side}_team`] &&
-        (!isBracketReadOnly() || matchState(match) === 'completed');
+        userPick === visibleTeam &&
+        (!isBracketReadOnly() || state !== 'completed');
       const result = pickResult(match);
       const classes = [
         'team-row',
