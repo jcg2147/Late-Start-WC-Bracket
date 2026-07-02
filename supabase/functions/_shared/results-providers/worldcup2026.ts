@@ -21,6 +21,9 @@ type WorldCup2026Response = {
 };
 
 const PROVIDER_NAME = 'worldcup2026';
+const TEAM_NAME_ALIASES: Record<string, string> = {
+  'democratic republic of the congo': 'Congo DR',
+};
 
 export function createWorldCup2026Provider(): ResultsProvider {
   const baseUrl = Deno.env.get('WORLDCUP2026_API_BASE_URL') ?? 'https://worldcup26.ir';
@@ -51,8 +54,8 @@ export function createWorldCup2026Provider(): ResultsProvider {
 function normalizeGame(game: WorldCup2026Game): CompletedFixtureResult {
   const externalMatchId = String(game.id ?? '').trim();
   const internalMatchId = Number.parseInt(externalMatchId, 10);
-  const homeTeamName = String(game.home_team_name_en ?? '').trim();
-  const awayTeamName = String(game.away_team_name_en ?? '').trim();
+  const homeTeamName = canonicalTeamName(String(game.home_team_name_en ?? '').trim());
+  const awayTeamName = canonicalTeamName(String(game.away_team_name_en ?? '').trim());
   const completed = isFinished(game.finished);
   const homeScore = parseScore(game.home_score);
   const awayScore = parseScore(game.away_score);
@@ -125,10 +128,15 @@ function detectPenaltyWinner(
 function normalizeWinnerName(winner: string | null, homeTeamName: string, awayTeamName: string): string | null {
   if (!winner) return null;
 
-  const normalizedWinner = normalizeName(winner);
+  const normalizedWinner = normalizeName(canonicalTeamName(winner));
   if (normalizedWinner === normalizeName(homeTeamName)) return homeTeamName;
   if (normalizedWinner === normalizeName(awayTeamName)) return awayTeamName;
   return null;
+}
+
+function canonicalTeamName(value: string): string {
+  const trimmed = value.trim();
+  return TEAM_NAME_ALIASES[normalizeName(trimmed)] ?? trimmed;
 }
 
 function normalizeName(value: string): string {

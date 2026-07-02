@@ -36,7 +36,10 @@ const jsonHeaders = {
   'content-type': 'application/json; charset=utf-8',
 };
 
-const SYNC_FUNCTION_VERSION = 'worldcup2026-score-sync-v4';
+const SYNC_FUNCTION_VERSION = 'worldcup2026-score-sync-v5';
+const TEAM_NAME_ALIASES: Record<string, string> = {
+  'democratic republic of the congo': 'congo dr',
+};
 
 Deno.serve(async (request) => {
   if (request.method !== 'POST') {
@@ -290,7 +293,8 @@ function validateTeams(match: InternalMatch, fixture: CompletedFixtureResult): s
 }
 
 function normalizeName(value: string | null): string {
-  return String(value ?? '').trim().toLowerCase();
+  const normalized = String(value ?? '').trim().toLowerCase();
+  return TEAM_NAME_ALIASES[normalized] ?? normalized;
 }
 
 function requiredEnv(name: string): string {

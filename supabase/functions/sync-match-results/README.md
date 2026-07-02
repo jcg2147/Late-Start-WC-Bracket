@@ -54,7 +54,7 @@ Expected response:
 ```json
 {
   "provider": "worldcup2026",
-  "version": "worldcup2026-score-sync-v4",
+  "version": "worldcup2026-score-sync-v5",
   "matchesChecked": 1,
   "matchesUpdated": 1,
   "scoresUpdated": 1,
