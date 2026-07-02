@@ -959,36 +959,44 @@
 
     function pickResult(match) {
       if (matchState(match) !== 'completed' || !match.winner) return null;
-      if (!match.local_winner) return 'none';
-      return match.local_winner === match.winner ? 'correct' : 'incorrect';
+      const userPick = match.submitted_pick || match.local_winner;
+      if (!userPick) return 'none';
+      return userPick === match.winner ? 'correct' : 'incorrect';
     }
 
     function deriveMatches(picks = localPicks) {
       const byId = new Map();
+      const readOnly = isBracketReadOnly();
       const derived = baseMatches
-        .map(match => ({ ...match, local_winner: null }))
+        .map(match => ({
+          ...match,
+          local_winner: null,
+          submitted_pick: picks[match.id] || null
+        }))
         .sort((a, b) => a.id - b.id);
 
       derived.forEach(match => {
-        ['home', 'away'].forEach(side => {
-          const sourceId = match[`${side}_source_match_id`];
-          if (!sourceId) return;
+        if (!readOnly) {
+          ['home', 'away'].forEach(side => {
+            const sourceId = match[`${side}_source_match_id`];
+            if (!sourceId) return;
 
-          const sourceMatch = byId.get(sourceId);
-          if (!sourceMatch) return;
+            const sourceMatch = byId.get(sourceId);
+            if (!sourceMatch) return;
 
-          const advancedTeam = match[`${side}_source_is_loser`]
-            ? getMatchLoser(sourceMatch)
-            : getMatchWinner(sourceMatch);
+            const advancedTeam = match[`${side}_source_is_loser`]
+              ? getMatchLoser(sourceMatch)
+              : getMatchWinner(sourceMatch);
 
-          if (advancedTeam) {
-            match[`${side}_team`] = advancedTeam;
-          }
-        });
+            if (advancedTeam) {
+              match[`${side}_team`] = advancedTeam;
+            }
+          });
+        }
 
         const pickedWinner = picks[match.id];
         if (
-          (isBracketReadOnly() || isMatchPickable(match)) &&
+          (readOnly || isMatchPickable(match)) &&
           pickedWinner &&
           (match.home_team === pickedWinner || match.away_team === pickedWinner)
         ) {
@@ -1002,6 +1010,8 @@
     }
 
     function sanitizePicks(picks) {
+      if (isBracketReadOnly()) return { ...picks };
+
       let nextPicks = { ...picks };
       let changed = true;
 
@@ -1191,7 +1201,10 @@
       const teamName = sourceLabel(match, side);
       const isKnownTeam = Boolean(match[`${side}_team`]);
       const editableTeam = getEditableTeam(match, side);
-      const isSelectedWinner = isKnownTeam && match.local_winner === match[`${side}_team`];
+      const isSelectedWinner =
+        isKnownTeam &&
+        match.local_winner === match[`${side}_team`] &&
+        (!isBracketReadOnly() || matchState(match) === 'completed');
       const result = pickResult(match);
       const classes = [
         'team-row',
@@ -1241,8 +1254,9 @@
         ? `<div class="official-winner">Official winner: ${escapeHtml(match.winner)}</div>`
         : '';
       const result = pickResult(match);
-      const pickLine = state === 'completed' && match.local_winner
-        ? `<div class="local-pick">Your pick: ${escapeHtml(match.local_winner)}</div>`
+      const userPick = match.submitted_pick || match.local_winner;
+      const pickLine = isBracketReadOnly() && userPick
+        ? `<div class="local-pick">Your pick: ${escapeHtml(userPick)}</div>`
         : '';
       const resultLine = result === 'correct'
         ? '<div class="pick-result correct">Correct pick</div>'
@@ -1280,8 +1294,7 @@
     }
 
     function renderFinalGoalsField(match) {
-      const finalWinner = match.local_winner || match.winner;
-      if (match.round !== 'F' || !finalWinner) return '';
+      if (match.round !== 'F') return '';
 
       if (isBracketReadOnly()) {
         return `
@@ -1290,6 +1303,9 @@
             <div class="match-field-value">${escapeHtml(finalGoalsValue || currentSubmission?.final_goals_tiebreaker || '0')}</div>
           </div>`;
       }
+
+      const finalWinner = match.local_winner || match.winner;
+      if (!finalWinner) return '';
 
       return `
         <div class="match-field">
